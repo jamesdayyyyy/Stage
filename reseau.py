@@ -89,7 +89,7 @@ class Automate:
         self.rack = rack
         self.slot = slot
         self.client = snap7.client.Client()
-        self.connect()
+        self.client.connect(self.ip, self.rack, self.slot) # modification suggerer passer a self.connect() pour gérer erreurs et reco auto
     
     def connect(self):
         try:
@@ -107,24 +107,24 @@ class Automate:
             print("[Automate] Impossible de se connecter à l'automate.")
             return None
         try:
-            data = self.automate.db_read(self.db_numero,0,40)
+            data = self.client.db_read(self.db_numero,0,36)
             vh_dans_pas = get_bool(data,0,0)
-            vis = get_string(data,2,8).strip()
-            type_vh = get_string(data,12,3).strip() # Non utilisé
-            silhouette = get_string(data, 18,3).strip() # Non utilisé
-            code_moteur = get_string(data, 24,3).strip()
-            type_ecran = get_string(data, 30, 3).strip()
+            vis = get_string(data,2).strip()
+            type_vh = get_string(data,12).strip() # Non utilisé
+            silhouette = get_string(data, 18).strip() # Non utilisé
+            code_moteur = get_string(data, 24).strip()
+            type_ecran = get_string(data, 30).strip()
 
             info_traduite = Config.MAPPING_AUTOMATE.get(
                 code_moteur, 
-                {"vehicule": "Inconnu", "motorisation": code_moteur}
+                {"VEHICULE": "Inconnu", "MOTORISATION": code_moteur}
                 )
 
             return {
                 "vh_dans_pas" : vh_dans_pas,
                 "vis" : vis,
-                "vehicule" : info_traduite.get("vehicule", "Inconnu"),
-                "motorisation" : info_traduite.get("motorisation", "Inconnu"),
+                "vehicule" : info_traduite.get("VEHICULE", "Inconnu"),
+                "motorisation" : info_traduite.get("MOTORISATION", "Inconnu"),
                 "type_ecran" : type_ecran
                 }
         
