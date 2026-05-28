@@ -221,6 +221,17 @@ class Config:
         "020" : { "VEHICULE" : "P54", "MOTORISATION" : "BEV"},
     }
 
-    NOM_VIS = []
+    NOM_VIS = ["Deflecteur ARG sous reservoir",
+               "Deflecteur AIR AVG sous plancher",
+               "Ecran sous moteur / berceau",
+               "Deflecteur sous moteur",
+               "Deflecteur AIR AVD sous plancher",
+               "Deflecteur AR sous batterie",
+               "Deflecteur AV sous batterie",
+               "Protecteur G / Train AR",
+               "Protecteur D / Train AR",
+               "Deflecteur AR",
+               "Deflecteur sous chargeur"]
+    
 
     
