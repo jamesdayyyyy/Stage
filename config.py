@@ -42,14 +42,14 @@ class Config:
     RASPBERRY = [
         {
         "NUMERO" : 0,
-        "IP" : "192.168.1.1",
+        "IP" : "10.226.178.51",
         "USERNAME" : "pimain",
         "PASSWORD" : "raspberry1",
         "CAM" : [],
         },
         {
         "NUMERO" : 1,
-        "IP" : "192.168.1.2",
+        "IP" : "10.226.178.52",
         "USERNAME" : "ingpi",
         "PASSWORD" : "raspberry1",
         "CAM" :  [1],
