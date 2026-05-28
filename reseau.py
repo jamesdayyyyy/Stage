@@ -155,11 +155,10 @@ def check_capture(queue_out):
                 print("[Système] Véhicule détecté. Préparation à la capture...")
                 timestamp = time.time()
                 vehicule = {
-                    "badge" : data.get("badge", ""),
                     "vis" : data.get("vis", ""),
                     "vehicule" : data.get("vehicule", ""),
                     "motorisation" : data.get("motorisation", ""),
-                    "silhouette" : data.get("silhouette", ""),
+                    "type_ecran" : data.get("type_ecran", ""),
                 }
                 with concurrent.futures.ThreadPoolExecutor(max_workers = len(connexions_ssh)) as executor:
                     futures = [executor.submit(rasp.get_photo) for rasp in connexions_ssh]
