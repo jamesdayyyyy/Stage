@@ -180,6 +180,3 @@ def check_capture(queue_out):
         print("\n[Système] Arret clavier")
     except Exception as e:
         print(f"\n[Erreur] {e}")
-        
-    finally:
-        GPIO.cleanup()
