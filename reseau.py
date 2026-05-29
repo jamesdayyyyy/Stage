@@ -89,7 +89,7 @@ class Automate:
         self.rack = rack
         self.slot = slot
         self.client = snap7.client.Client()
-        self.client.connect(self.ip, self.rack, self.slot) # modification suggerer passer a self.connect() pour gérer erreurs et reco auto
+        self.connect() 
     
     def connect(self):
         try:
