@@ -9,6 +9,7 @@ from helper_database import Database
 from helper_csv import ZoneConfigHelper
 from helper_storage import GestionnaireRAM, traiter_stockage
 from helper_affichage import Canvas_interactif
+from helper_automate import Automate
 
 class ApplicationTkinter:
     def __init__(self, root, queue_in):
@@ -137,15 +138,37 @@ class ApplicationTkinter:
     def tache_stockage_arriere_plan(self, lot_complet):
         """Exécuté en arrière-plan pour ne pas figer Tkinter."""
         infos_traitees = []
+        vehicule_est_ok = True
+        erreur_systeme = False
+        zones_nok = []
         
+
         for info in lot_complet:
             succes_stockage = traiter_stockage(info, Config.HDD_PATH, self.cache_ram)
             
             if not succes_stockage:
                 print(f"[UI/DB] Avertissement: Photo de Cam {info.get('camera_source')} manquante, mais historisée.")
                 info["image_hdd_path"] = ""
+                erreur_systeme = True
+
             self.db.sauvegarder_info(info)
             infos_traitees.append(info)
+
+            for res in info.get("resultats_vision", []):
+                if float(res.get("score", 0.0)) < Config.SCORE_SEUIL:
+                    vehicule_est_ok = False
+                    nom_defaut = res.get("nom_vissage", f"Z{res.get('numero_zone', 'X')}")
+                    zones_nok.append(nom_defaut)
+        if erreur_systeme:
+            vehicule_est_ok = False
+        try:
+            automate = Automate(Config.AUTOMATE_IP, Config.AUTOMATE_DB_ENVOIE, Config.AUTOMATE_RACK, Config.AUTOMATE_SLOT)
+            automate.envoyer_resultats(vehicule_est_ok, zones_nok, erreur_systeme)
+            if automate.client is not None:
+                automate.client.disconnect()
+                
+        except Exception as e:
+            print(f"[UI/Automate] Erreur lors de l'envoi des résultats à l'automate : {e}")
                 
         self.root.after(0, lambda lot=infos_traitees: self.ajouter_historique_et_afficher(lot))
 

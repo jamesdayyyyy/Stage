@@ -9,10 +9,12 @@ Created on Mon May 18 15:00:32 2026
 import time
 import concurrent.futures
 import os
-from config import Config
 import paramiko
 import snap7
 from snap7.util import get_bool, get_string
+
+from helper_automate import Automate
+from config import Config
 
 class Connexion_SSH:
     def __init__(self,pi):
@@ -80,58 +82,6 @@ class Connexion_SSH:
             self.ssh.close()
             self.ssh = None
             return []
-        
-class Automate:
-    def __init__(self, ip, db_numero, rack=0,slot=0):
-        self.ip = ip
-        self.db_numero = db_numero
-        self.rack = rack
-        self.slot = slot
-        self.client = snap7.client.Client()
-        self.connect() 
-    
-    def connect(self):
-        try:
-            self.client.connect(self.ip, self.rack, self.slot)
-            print(f"[Automate] Connecté à l'automate")
-        except Exception as e:
-            print(f"[Erreur - Automate {self.ip}] Échec de la connexion : {e}")
-            self.client = None
-    
-    def lire_data(self):
-        if self.client is None or not self.client.get_connected():
-            print("[Automate] Automate hors ligne. Reconnexion...")
-            self.connect()
-        if self.client is None:
-            print("[Automate] Impossible de se connecter à l'automate.")
-            return None
-        try:
-            data = self.client.db_read(self.db_numero,0,36)
-            vh_dans_pas = get_bool(data,0,0)
-            vis = get_string(data,2).strip()
-            type_vh = get_string(data,12).strip() # Non utilisé
-            silhouette = get_string(data, 18).strip() # Non utilisé
-            code_moteur = get_string(data, 24).strip()
-            type_ecran = get_string(data, 30).strip()
-
-            info_traduite = Config.MAPPING_VEHICULE.get(
-                code_moteur, 
-                {"VEHICULE": "Inconnu", "MOTORISATION": code_moteur}
-                )
-
-            return {
-                "vh_dans_pas" : vh_dans_pas,
-                "vis" : vis,
-                "vehicule" : info_traduite.get("VEHICULE", "Inconnu"),
-                "motorisation" : info_traduite.get("MOTORISATION", "Inconnu"),
-                "type_ecran" : type_ecran
-                }
-        
-        except Exception as e:
-            print(f"[Erreur - Automate] {e}")
-            self.client.disconnect()
-            self.client = None
-            return None
 
 def check_capture(queue_out):
     connexions_ssh = [Connexion_SSH(rasp) for rasp in Config.RASPBERRY if rasp["NUMERO"] != 0]
