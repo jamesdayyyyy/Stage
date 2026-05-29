@@ -271,7 +271,11 @@ class Canvas_interactif(tk.Canvas):
         else:
             nom_vissage_temp = self.afficher_popup_nom()
             if nom_vissage_temp is None:
+                self.delete(self.rect)
+                self.rect = None 
+                self.end_x = self.end_y = None
                 return 
+            
             nom_vissage = nom_vissage_temp
             
         self.csv_helper.sauvegarder_nouvelle_zone(
@@ -413,5 +417,5 @@ class Canvas_interactif(tk.Canvas):
         tk.Button(btn_frame, text="Valider", command=valider).pack(side=tk.LEFT, padx=10)
         tk.Button(btn_frame, text="Annuler", command=annuler).pack(side=tk.LEFT, padx=10)
 
-        self.wait_variable
+        self.wait_window(fenetre)
         return resultat["nom"]
