@@ -67,13 +67,18 @@ class ApplicationTkinter:
         cam_frame = tk.LabelFrame(menu, text="Caméras", bg="#2b2b2b", fg="white", font=("Arial", 10, "bold"))
         cam_frame.pack(fill="both", expand=True, padx=8, pady=8)
 
+        self.boutons_cameras = []
+
         for index, cam_data in enumerate(Config.CAM):
-            tk.Button(
+            btn = tk.Button(
                 cam_frame,
                 text=cam_data["NOM"],
                 anchor="w", bg="#eeeeee", fg="#222222", relief="flat",
                 command=lambda i=index: self.change_image_by_index(i)
-            ).pack(fill="x", pady=4, padx=4)
+            )
+            btn.pack(fill="x", pady=4, padx=4)
+            self.boutons_cameras[cam_data["NUMERO"]] = btn
+
 
         # ZONE IMAGE PRINCIPALE
         image_frame = tk.Frame(main_frame, bg="black")
@@ -90,7 +95,7 @@ class ApplicationTkinter:
         self.lbl_date.pack(side="right", padx=10, pady=5)
 
         # --- INTÉGRATION DU HELPER AFFICHAGE ---
-        self.canvas = Canvas_interactif(image_frame, self.db, self.csv_helper, max_size=(1200, 800))
+        self.canvas = Canvas_interactif(image_frame, self.db, self.csv_helper, app = self, max_size=(1200, 800))
         self.canvas.pack(fill="both", expand=True)
 
         # CONTRÔLES NAVIGATION
@@ -164,8 +169,8 @@ class ApplicationTkinter:
         print(f"[UI] Mise à jour de l'affichage pour le véhicule {vehicule} avec {len(lot_infos)} caméra(s).")
         
         self.header.config(text=f"Véhicule: {vehicule}")
-        
         self.change_image_by_index(0)
+        self.mettre_a_jour_couleurs_boutons()
 
     def change_image_by_index(self, index):
         if not self.infos_vehicule_actuel: return
@@ -239,3 +244,19 @@ class ApplicationTkinter:
             print("[UI] Historique dépassé, véhicule le plus ancien supprimé.")
         self.index_historique = len(self.historique_vehicules) - 1
         self.afficher_nouveau_vehicule(self.historique_vehicules[self.index_historique])
+
+    def mettre_a_jour_couleurs_boutons(self):
+        if not self.infos_vehicule_actuel: return 
+
+        for btn in self.boutons_cameras.values():
+            btn.config(bg="#eeeeee",fg="#222222")
+        for info_cam in self.infos_vehicule_actuel:
+            cam_id = info_cam["camera_source"]
+            camera_defaut = False 
+            for res in info_cam.get("resultats_vision", []):
+                if float(res.get("score"), 0.0) < Config.SCORE_SEUIL:
+                    camera_defaut = True
+                    break
+                if cam_id in self.boutons_cameras:
+                    if camera_defaut:
+                        self.boutons_cameras[cam_id].config(bg="#ff4d3d", fg="white")

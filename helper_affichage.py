@@ -16,10 +16,11 @@ from config import Config
 import numpy as np
 
 class Canvas_interactif(tk.Canvas):
-    def __init__(self, parent, db, csv_helper, max_size = (800,600), **kwargs):
+    def __init__(self, parent, db, csv_helper, app = None, max_size = (800,600), **kwargs):
         super().__init__(parent, cursor="cross",bg = "black", **kwargs)
         self.db = db
         self.csv_helper = csv_helper
+        self.app = app
         self.max_w, self.max_h = max_size
         
         self.image_path = None
@@ -327,6 +328,14 @@ class Canvas_interactif(tk.Canvas):
                     # Tracer dans la DB
                     self.db.add_reference_to_db(self.vis, self.vehicule, self.camera, z['numero_zone'])
                     print(f"[Canvas] Référence ajoutée pour Zone {z['numero_zone']}")
+
+                    if self.app and self.app.infos_vehicule_actuel:
+                        for info_cam in self.app.infos_vehicule_actuel:
+                            if str(info_cam["camera_source"]) == str(self.camera):
+                                for res in info_cam.get("resultats_vision", []):
+                                    if str(res["numero_zone"]) == str(z['numero_zone']):
+                                        res["score"] = 100.0
+                        self.app.mettre_a_jour_couleurs_boutons()
 
                     self.delete(f"zone_{z['numero_zone']}")
 
