@@ -114,7 +114,7 @@ class Automate:
             code_moteur = get_string(data, 24).strip()
             type_ecran = get_string(data, 30).strip()
 
-            info_traduite = Config.MAPPING_AUTOMATE.get(
+            info_traduite = Config.MAPPING_VEHICULE.get(
                 code_moteur, 
                 {"VEHICULE": "Inconnu", "MOTORISATION": code_moteur}
                 )
