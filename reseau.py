@@ -7,7 +7,6 @@ Created on Mon May 18 15:00:32 2026
 """
 
 import time
-import RPi.GPIO as GPIO
 import concurrent.futures
 import os
 from config import Config
