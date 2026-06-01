@@ -19,7 +19,7 @@ info_vehicule = {
     "timestamp"
     "image" -> path dans la RAM
     "camera_source"
-    "type_materiau"
+    "type_ecran"
     "resultats_vision" : [{
         "numero_zone" 
         "nom_vissage"
@@ -193,7 +193,6 @@ class Config:
     MARGE_RECHERCHE = 100
 
     SCORE_SEUIL = 85.0
-    TYPE_MATERIAU_SEUIL = 800.0
     
     CACHE_LIMIT = 3
     

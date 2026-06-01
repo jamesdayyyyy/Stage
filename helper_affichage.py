@@ -35,7 +35,7 @@ class Canvas_interactif(tk.Canvas):
         self.offset_x = 0
         self.offset_y = 0
         
-        self.camera = self.vehicule = self.motorisation = self.type_mat = self.vis = None
+        self.camera = self.vehicule = self.motorisation = self.type_ecran = self.vis = None
         
         self.rect = None 
         self.start_x = self.start_y = self.end_x = self.end_y = None 
@@ -60,7 +60,7 @@ class Canvas_interactif(tk.Canvas):
             self.camera = detail[0]
             self.vehicule = detail[1]
             self.motorisation = detail[2]
-            self.type_mat = detail[3]
+            self.type_ecran = detail[3]
             self.vis = detail[4]
             self.controle = detail[5].split(".")[0]
             return True
@@ -71,7 +71,7 @@ class Canvas_interactif(tk.Canvas):
             self.motorisation = detail[2]
             self.vis = detail[3]
             self.controle = detail[4].split(".")[0]
-            self.type_mat = ""
+            self.type_ecran = ""
             return True
         
         else:
@@ -87,12 +87,6 @@ class Canvas_interactif(tk.Canvas):
         self.image_originale_cv = cv2.imread(path)
         if not self.extract_data(path) : return
 
-        besoin_check = any(str(cam["NUMERO"]) == str(self.camera) and cam.get("TYPE") is True for cam in Config.CAM)
-        if besoin_check:
-            zones = self.csv_helper.lire_zones(self.vehicule, self.motorisation, self.camera)
-            has_zone_0 = any(str(z.get('numero_zone')) == "0" for z in zones)
-            if not has_zone_0:
-                messagebox.showinfo("Zone triage requise", f"Attention : La caméra {self.camera} nécessite une zone de triage afin de faire une analyse.\nVeuillez en créer une.")
         self.zoom_factor = 1
         self.rafraichir_image()
           
@@ -148,7 +142,7 @@ class Canvas_interactif(tk.Canvas):
         
         for z in zones_config:
             z_id = str(z["numero_zone"])
-            if z_id == "0" or z.get("type") in [self.type_mat, "none", "None", ""]:
+            if z.get("type") in [self.type_ecran, "none", "None", ""]:
                 x0 = int(float(z["x0"]) * self.ratio) + self.offset_x
                 y0 = int(float(z["y0"]) * self.ratio) + self.offset_y
                 x1 = int(float(z["x1"]) * self.ratio) + self.offset_x
@@ -224,10 +218,8 @@ class Canvas_interactif(tk.Canvas):
 
     def _get_target_directory(self):
         base_dir = f"{Config.REF_PATH}/{self.vehicule}_{self.motorisation}"
-        if self.type_mat == "M": return os.path.join(base_dir, "metal")
-        elif self.type_mat == "C": return os.path.join(base_dir, "classique")
-        return base_dir
-                    
+        if self.type_ecran == "":  return base_dir
+        else : return os.path.join(base_dir, self.type_ecran)                    
 
     def action_creer_zone(self):
         h_orig, w_orig = self.image_originale_cv.shape[:2]
@@ -244,14 +236,14 @@ class Canvas_interactif(tk.Canvas):
         
         zones_existantes = self.csv_helper.lire_zones(self.vehicule, self.motorisation, self.camera)
         for z in zones_existantes:
-            if z["type"] == self.type_mat:
+            if z["type"] == self.type_ecran :
                 chevauchement = not (orig_x1 <= int(z['x0']) or orig_x0 >= int(z['x1']) or orig_y1 <= int(z['y0']) or orig_y0 >= int(z['y1']))
                 if chevauchement:
                     messagebox.showwarning("Collision", f"La zone chevauche avec la zone {z['numero_zone']}")
                     self.delete(self.rect)
                     return
                     
-        new_id = self.obtenir_prochain_id_zone(self.vehicule, self.motorisation, self.type_mat)
+        new_id = self.obtenir_prochain_id_zone(self.vehicule, self.motorisation, self.type_ecran)
                 
         if self.rect:
             self.delete(self.rect)
@@ -266,9 +258,9 @@ class Canvas_interactif(tk.Canvas):
             variance = np.var(gray)
             
             if variance > Config.TYPE_MATERIAU_SEUIL:
-                self.type_mat = "M"
+                self.type_ecran = "M"
             else:
-                self.type_mat = "C"
+                self.type_ecran = "C"
         else:
             nom_vissage_temp = self.afficher_popup_nom()
             if nom_vissage_temp is None:
@@ -281,7 +273,7 @@ class Canvas_interactif(tk.Canvas):
             
         self.csv_helper.sauvegarder_nouvelle_zone(
             self.vehicule, self.motorisation, self.camera, new_id, 
-            orig_x0, orig_y0, orig_x1, orig_y1, self.type_mat, nom_vissage
+            orig_x0, orig_y0, orig_x1, orig_y1, self.type_ecran, nom_vissage
             )
         
         if new_id != 0:
@@ -297,7 +289,7 @@ class Canvas_interactif(tk.Canvas):
             os.rename(self.image_path, path_to_change)
             self.image_path = path_to_change
         else :
-            self.db.update_type_materiau(self.vis, self.camera, self.type_mat)
+            self.db.update_type_materiau(self.vis, self.camera, self.type_ecran)
 
         print(f"[Canvas] Zone {new_id} créée et historisée.")
 
@@ -311,7 +303,7 @@ class Canvas_interactif(tk.Canvas):
         zones_existantes = self.csv_helper.lire_zones(self.vehicule, self.motorisation, self.camera)
         
         for z in zones_existantes:
-            if z["type"] == self.type_mat and int(z['x0']) < orig_x < int(z['x1']) and int(z['y0']) < orig_y < int(z['y1']):
+            if z["type"] == self.type_ecran and int(z['x0']) < orig_x < int(z['x1']) and int(z['y0']) < orig_y < int(z['y1']):
                 if messagebox.askquestion("Ajouter Référence", f"Ajouter image de référence pour la zone {z['numero_zone']} ?") == "yes":
                     
                     cropped_img = self.image_originale_cv[z['y0']:z['y1'], z['x0']:z['x1']]
@@ -362,11 +354,6 @@ class Canvas_interactif(tk.Canvas):
         zones = self.csv_helper.lire_zones(vehicule, motorisation)
 
         zones_cam = [z for z in zones if str(z.get('numero_camera')) == str(self.camera)]
-        has_zone_0 = any(str(z.get('numero_zone')) == "0" for z in zones_cam)
-
-        besoin_verif = any(str(cam["NUMERO"]) == str(self.camera) and cam.get("TYPE") is True for cam in Config.CAM)
-        if not has_zone_0 and besoin_verif:
-            return 0
         
         if not zones: return 1
         
@@ -376,27 +363,19 @@ class Canvas_interactif(tk.Canvas):
         if type_actuel in ["None", "none", None, ""]:
             return max_id + 1
         
-        m_ids = set(int(z['numero_zone']) for z in zones if z.get('type') == 'M'
-                    and str(z.get('numero_zone', '')).isdigit() 
-                    and int(z['numero_zone']) != 0)
-        c_ids = set(int(z['numero_zone']) for z in zones if z.get('type') == 'C' and str(z.get('numero_zone', '')).isdigit() and int(z['numero_zone']) != 0)
-            
-        # Si on ajoute une zone Métal, on cherche s'il y a une Classique orpheline
-        if type_actuel == 'M':
-            unpaired_c = c_ids - m_ids
-            if unpaired_c:
-                return min(unpaired_c) 
-            return max_id + 1
-            
-        # Si on ajoute une zone Classique, on cherche s'il y a une Métal orpheline
-        if type_actuel == 'C':
-            unpaired_m = m_ids - c_ids
-            if unpaired_m:
-                return min(unpaired_m)
-            return max_id + 1
+        ids_du_type_actuel = set(
+            int(z['numero_zone']) for z in zones_cam 
+            if z.get('type') == type_actuel and str(z.get('numero_zone', '')).isdigit())
         
-        return max_id + 1
-    
+        ids_des_autres_types = set(
+            int(z['numero_zone']) for z in zones_cam 
+            if z.get('type') != type_actuel and str(z.get('numero_zone', '')).isdigit())
+        
+        zones_orphelines = ids_des_autres_types - ids_du_type_actuel
+        if zones_orphelines:
+            return min(zones_orphelines)
+        return max_id +1
+            
     def afficher_popup_nom(self):
         fenetre = tk.Toplevel(self.master)
         fenetre.title("Nom du vissage")

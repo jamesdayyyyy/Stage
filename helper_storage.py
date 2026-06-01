@@ -36,7 +36,7 @@ def generer_nom(info_vehicule):
     camera = info_vehicule.get('camera_source', 'X')    
     vehicule = info_vehicule.get('vehicule', "Inconnu")
     motorisation = info_vehicule.get('motorisation', "Inconnu")
-    type_mat = info_vehicule.get('type_materiau')
+    type_ecran = info_vehicule.get('type_ecran')
     vis = info_vehicule.get('vis', "Inconnu")
     
     resultats = info_vehicule.get("resultats_vision", [])
@@ -53,9 +53,9 @@ def generer_nom(info_vehicule):
         else:
             chaine_controle += "0"
         
-    if type_mat in [None, "None", "none", ""]:
+    if type_ecran in [None, "None", "none", ""]:
         return f"{camera}_{vehicule}_{motorisation}_{vis}_{chaine_controle}.jpg"
-    return f"{camera}_{vehicule}_{motorisation}_{type_mat}_{vis}_{chaine_controle}.jpg"
+    return f"{camera}_{vehicule}_{motorisation}_{type_ecran}_{vis}_{chaine_controle}.jpg"
 
 def traiter_stockage(info_vehicule, hdd_path, cache_ram=None):
     image_temp_ram = info_vehicule.get("image")

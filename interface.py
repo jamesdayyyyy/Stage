@@ -283,3 +283,4 @@ class ApplicationTkinter:
                 if cam_id in self.boutons_cameras:
                     if camera_defaut:
                         self.boutons_cameras[cam_id].config(bg="#ff4d3d", fg="white")
+

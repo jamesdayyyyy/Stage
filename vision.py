@@ -18,26 +18,12 @@ from config import Config
 Il faut ajouter la gesiton de type du vehicule
 """
 
-def determiner_type(image, coords_zone):
-    x0, y0, x1, y1 = coords_zone
-    zone_triage = image[y0:y1, x0:x1]
-    
-    gray = cv2.cvtColor(zone_triage, cv2.COLOR_BGR2GRAY)
-    variance = np.var(gray)
-        
-    #A modifier en fonction de test
-    if variance > Config.TYPE_MATERIAU_SEUIL:
-        return "M"
-    else:
-        return "C"
-
 def determiner_path(vehicule, motorisation, type_zone):
     base_dir = f"{Config.REF_PATH}/{vehicule}_{motorisation}"
-    if type_zone == "M":
-        return os.path.join(base_dir, "metal")
-    elif type_zone == "C":
-        return os.path.join(base_dir, "classique")
-    else: return base_dir
+    if type_zone == "":
+        return base_dir
+    else :
+        return os.path.join(base_dir, type_zone)
 
 def traitement_image(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -63,7 +49,6 @@ def analyse_image(queue_in, queue_out, worker_id):
             
             if image_couleur is None:
                 print(f"[Erreur - Vision {worker_id}] Image introuvable : {path_photo}")
-                info_vehicule["type_materiau"] = None
                 info_vehicule["resultats_vision"] = []
                 
                 # On envoie quand même dans la queue_out pour débloquer le buffer de l'interface
@@ -75,28 +60,18 @@ def analyse_image(queue_in, queue_out, worker_id):
                 
             csv_path = f"{Config.ZONES_CSV_PATH}/{vehicule}_{motorisation}.csv"
             resultats_zones = []
-            info_vehicule["type_materiau"] = None
             
             if os.path.exists(csv_path):
                 with open(csv_path, newline = "") as csv_data:
                     reader = list(csv.DictReader(csv_data))
                     
-                type_detecte = None
                 besoin_check = any(str(cam["NUMERO"]) == camera_id and cam.get("TYPE") == True for cam in Config.CAM)
-                if besoin_check:
-                    for row in reader:
-                        if row["numero_camera"] == camera_id and row["numero_zone"] == "0":
-                            coords = (int(row['x0']), int(row['y0']), int(row['x1']), int(row['y1']))
-                            type_detecte = determiner_type(image_couleur, coords)
-                            print(f"[Vision {worker_id}] Caméra {camera_id} - Type détecté : {type_detecte}")
-                            break
-                        
-                info_vehicule["type_materiau"] = type_detecte
+
                 
                 for row in reader:
                     if row["numero_camera"] == camera_id :
                         
-                        if besoin_check and row["type"] not in [type_detecte, "none", "None", ""]:
+                        if besoin_check and row["type"] not in [info_vehicule["type_ecran"], "none", "None", ""]:
                             continue
                     
                         zone_id = row["numero_zone"]
@@ -159,6 +134,5 @@ def analyse_image(queue_in, queue_out, worker_id):
             
         except Exception as e:
             print(f"[Vision {worker_id}] Crash {e} ")
-            info_vehicule.setdefault("type_materiau", None)
             info_vehicule.setdefault("resultats_vision", [])
             queue_out.put(info_vehicule)
