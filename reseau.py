@@ -103,11 +103,14 @@ def check_capture(queue_out):
             if nouveau_etat_presence and not ancien_etat_presence:
                 print("[Système] Véhicule détecté. Préparation à la capture...")
                 timestamp = time.time()
+                type_ecran = data.get("type_ecran", "")
+                if type_ecran == "***":
+                    type_ecran = ""
                 vehicule = {
                     "vis" : data.get("vis", ""),
                     "vehicule" : data.get("vehicule", ""),
                     "motorisation" : data.get("motorisation", ""),
-                    "type_ecran" : data.get("type_ecran", ""),
+                    "type_ecran" : type_ecran,
                 }
                 with concurrent.futures.ThreadPoolExecutor(max_workers = len(connexions_ssh)) as executor:
                     futures = [executor.submit(rasp.get_photo) for rasp in connexions_ssh]

@@ -165,3 +165,24 @@ class Database:
         finally:
             if 'conn' in locals() and conn:
                 conn.close()
+
+    def rechercher_vehicule(self, vis_query = "", vehicule_query = "", motorisation_query = ""):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            query = """
+                SELECT vis, vehicule, motorisation, timestamp 
+                FROM inspections 
+                WHERE vis LIKE ? AND vehicule LIKE ? AND motorisation LIKE ?
+                GROUP BY vis 
+                ORDER BY timestamp DESC LIMIT 50
+            """
+            cursor.execute(query, (f"%{vis_query}%", f"%{vehicule_query}%", f"%{motorisation_query}%"))
+            return cursor.fetchall()
+        except sqlite3.Error as e:
+            print(f"[DB] Erreur lors de la recherche : {e}")
+            return []
+        finally:
+            if 'conn' in locals() and conn:
+                conn.close()

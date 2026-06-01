@@ -301,12 +301,31 @@ class Canvas_interactif(tk.Canvas):
         orig_y = int((self.start_y - self.offset_y) / self.ratio)
     
         zones_existantes = self.csv_helper.lire_zones(self.vehicule, self.motorisation, self.camera)
-        
+        scores = self.obtenir_scores_db()
+
         for z in zones_existantes:
-            if z["type"] == self.type_ecran and int(z['x0']) < orig_x < int(z['x1']) and int(z['y0']) < orig_y < int(z['y1']):
+            z_id = str(z["numero_zone"])
+            data_score = scores.get(z_id)
+            match_x = data_score.get("match_x") if data_score else None
+            match_y = data_score.get("match_y") if data_score else None
+            largeur = int(z['x1']) - int(z['x0'])
+            hauteur = int(z['y1']) - int(z['y0'])
+
+            if match_x and match_y:
+                x0_clic_cible = match_x
+                y0_clic_cible = match_y
+                x1_clic_cible = match_x + largeur
+                y1_clic_cible = match_y + hauteur
+            else:
+                x0_clic_cible = int(z['x0'])
+                y0_clic_cible = int(z['y0'])
+                x1_clic_cible = int(z['x1'])
+                y1_clic_cible = int(z['y1'])
+
+            if z["type"] == self.type_ecran and x0_clic_cible < orig_x < x1_clic_cible and y0_clic_cible < orig_y < y1_clic_cible :
                 if messagebox.askquestion("Ajouter Référence", f"Ajouter image de référence pour la zone {z['numero_zone']} ?") == "yes":
                     
-                    cropped_img = self.image_originale_cv[z['y0']:z['y1'], z['x0']:z['x1']]
+                    cropped_img = self.image_originale_cv[y0_clic_cible:y1_clic_cible, x0_clic_cible:x1_clic_cible]
                     target_dir = self._get_target_directory()
                     os.makedirs(target_dir, exist_ok=True)
                     
@@ -331,13 +350,11 @@ class Canvas_interactif(tk.Canvas):
 
                     self.delete(f"zone_{z['numero_zone']}")
 
-                    z_id = str(z["numero_zone"])
-                    x0 = int(float(z["x0"]) * self.ratio) + self.offset_x
-                    y0 = int(float(z["y0"]) * self.ratio) + self.offset_y
-                    x1 = int(float(z["x1"]) * self.ratio) + self.offset_x
-                    y1 = int(float(z["y1"]) * self.ratio) + self.offset_y
+                    x0 = int(x0_clic_cible * self.ratio) + self.offset_x
+                    y0 = int(y0_clic_cible * self.ratio) + self.offset_y
+                    x1 = int(x1_clic_cible * self.ratio) + self.offset_x
+                    y1 = int(y1_clic_cible * self.ratio) + self.offset_y
                 
-
                     couleur = "#00ff00"
                     texte = f"Zone {z_id} : 100%"
 

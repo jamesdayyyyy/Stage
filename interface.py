@@ -1,8 +1,10 @@
 import tkinter as tk
+from tkinter import ttk
 import os
 import queue
 import concurrent.futures
 from datetime import datetime
+import glob
 
 from config import Config
 from helper_database import Database
@@ -30,6 +32,7 @@ class ApplicationTkinter:
 
         self.historique_vehicules = []
         self.index_historique = -1
+        self.mode_recherche = False
         
         # État de la visualisation
         self.infos_vehicule_actuel = []
@@ -58,11 +61,15 @@ class ApplicationTkinter:
         menu = tk.Frame(main_frame, width=220, bg="#2b2b2b")
         menu.pack(side="left", fill="y", padx=5, pady=5)
 
+
         # ZONE ZOOM
         zoom_frame = tk.LabelFrame(menu, text="Zoom", bg="#2b2b2b", fg="white", font=("Arial", 10, "bold"))
         zoom_frame.pack(fill="x", padx=8, pady=8)
         tk.Button(zoom_frame, text="+", height=2, command=self.zoom_in).pack(side="left", fill="x", expand=True, padx=5, pady=5)
         tk.Button(zoom_frame, text="-", height=2, command=self.zoom_out).pack(side="left", fill="x", expand=True, padx=5, pady=5)
+                
+        btn_recherche = tk.Button(menu, text="Recherche véhicule", bg="#2b2b2b", fg="white", font=("Arial", 10, "bold"), command=self.ouvrir_gestionnaire)
+        btn_recherche.pack(fill="x", padx=8, pady=10)
 
         # ZONE CAMERAS
         cam_frame = tk.LabelFrame(menu, text="Caméras", bg="#2b2b2b", fg="white", font=("Arial", 10, "bold"))
@@ -73,7 +80,7 @@ class ApplicationTkinter:
         for index, cam_data in enumerate(Config.CAM):
             btn = tk.Button(
                 cam_frame,
-                text=cam_data["NOM"],
+                text=f"{cam_data["NUMERO"]} : {cam_data["NOM"]}",
                 anchor="w", bg="#eeeeee", fg="#222222", relief="flat",
                 command=lambda i=index: self.change_image_by_index(i)
             )
@@ -105,7 +112,7 @@ class ApplicationTkinter:
         
         tk.Button(nav_frame, text="◀ Caméra Précédente", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_precedent).pack(side="left", padx=20)
         tk.Button(nav_frame, text="Caméra Suivante ▶", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_suivant).pack(side="right", padx=20)
-
+        self.btn_retour_direct = tk.Button(nav_frame, text="RETOUR AU DIRECT", font=("Arial", 12, "bold"), bg="#e74c3c", fg="white", command=self.retour_au_direct)
 
     def process_queue(self):
         """Vérifie si de nouvelles images sont arrivées de vision.py."""
@@ -175,14 +182,17 @@ class ApplicationTkinter:
     def afficher_nouveau_vehicule(self, lot_infos):
         """Met à jour l'état de l'application avec le nouveau véhicule."""
         if not lot_infos: return
-        
-        if self.historique_vehicules:
-            est_en_direct = (self.index_historique == len(self.historique_vehicules) - 1)
-        else : est_en_direct = True
-        if not est_en_direct:
+
+        if self.mode_recherche:
             self.bandeau_alerte.pack(fill="x", after=self.header)
         else:
-            self.bandeau_alerte.pack_forget()
+            if self.historique_vehicules:
+                est_en_direct = (self.index_historique == len(self.historique_vehicules) - 1)
+            else : est_en_direct = True
+            if not est_en_direct:
+                self.bandeau_alerte.pack(fill="x", after=self.header)
+            else:
+                self.bandeau_alerte.pack_forget()
 
         # On trie la liste par numéro de caméra pour la navigation
         self.infos_vehicule_actuel = sorted(lot_infos, key=lambda x: int(x["camera_source"]))
@@ -265,8 +275,11 @@ class ApplicationTkinter:
         if len(self.historique_vehicules) > Config.CACHE_LIMIT:
             self.historique_vehicules.pop(0)
             print("[UI] Historique dépassé, véhicule le plus ancien supprimé.")
-        self.index_historique = len(self.historique_vehicules) - 1
-        self.afficher_nouveau_vehicule(self.historique_vehicules[self.index_historique])
+        if not self.mode_recherche:
+            self.index_historique = len(self.historique_vehicules) - 1
+            self.afficher_nouveau_vehicule(self.historique_vehicules[self.index_historique])
+        else:
+            print(f"[UI] Un véhicule live a été traité en arrière-plan. (Affichage bloqué par le mode Recherche)")
 
     def mettre_a_jour_couleurs_boutons(self):
         if not self.infos_vehicule_actuel: return 
@@ -283,4 +296,98 @@ class ApplicationTkinter:
                 if cam_id in self.boutons_cameras:
                     if camera_defaut:
                         self.boutons_cameras[cam_id].config(bg="#ff4d3d", fg="white")
+
+    def ouvrir_gestionnaire(self):
+        fenetre = tk.Toplevel(self.root)
+        fenetre.title("Gestionnaire de Fichiers / Archives")
+        fenetre.geometry("700x400")
+        fenetre.grab_set() # Empêche de cliquer derrière
+        fenetre.config(bg="#2b2b2b")
+
+        # --- Champs de recherche ---
+        search_frame = tk.Frame(fenetre, bg="#2b2b2b")
+        search_frame.pack(fill="x", padx=10, pady=10)
+
+        tk.Label(search_frame, text="VIS :", bg="#2b2b2b", fg="white").grid(row=0, column=0, padx=5)
+        ent_vis = tk.Entry(search_frame)
+        ent_vis.grid(row=0, column=1, padx=5)
+
+        tk.Label(search_frame, text="Modèle :", bg="#2b2b2b", fg="white").grid(row=0, column=2, padx=5)
+        ent_veh = tk.Entry(search_frame)
+        ent_veh.grid(row=0, column=3, padx=5)
+
+        tk.Label(search_frame, text="Moteur :", bg="#2b2b2b", fg="white").grid(row=0, column=4, padx=5)
+        ent_mot = tk.Entry(search_frame)
+        ent_mot.grid(row=0, column=5, padx=5)
+
+        colonnes = ("VIS", "Véhicule", "Motorisation", "Date & Heure", "Timestamp")
+        tree = ttk.Treeview(fenetre, columns=colonnes, show="headings")
+        for col in colonnes:
+            tree.heading(col, text = col)
+            if col == "Timestamp":
+                tree.column(col, width=0, stretch=tk.NO)
+            else:
+                tree.column(col, width=150, anchor = "center")
+        tree.pack(fill="both", expand = True,padx=10, pady=10)
+
+        def lancer_recherche():
+            for item in tree.get_children(): tree.delete(item)
+            resultats = self.db.rechercher_vehicule(ent_vis.get(), ent_veh.get() ,ent_mot.get())
+            for res in resultats:
+                vis, veh, mot, timestamp = res
+                date_str = datetime.fromtimestamp(int(timestamp)).strftime("%d/%m/%Y %H:%M:%S")
+                tree.insert("", tk.END, values=(vis, veh, mot, date_str, timestamp))
+                
+        tk.Button(search_frame, text="Rechercher", bg="#2b2b2b", fg="white", command=lancer_recherche).grid(row=0, column=6, padx=10)
+
+        def on_double_click(event):
+            selection = tree.selection()
+            if not selection: return
+            valeurs = tree.item(selection[0], "values")
+            vis, timestamp = valeurs[0], valeurs[4]
+            self.charger_vehicule_archive(vis, timestamp)
+            fenetre.destroy()
+
+        tree.bind("<Double-1>", on_double_click)
+        lancer_recherche()
+
+    def charger_vehicule_archive(self, vis, timestamp):
+        dt = datetime.fromtimestamp(int(timestamp))
+        dossier_hdd = os.path.join(Config.HDD_PATH, f"{dt.year}/{dt.strftime('%m')}/{dt.strftime('%d')}")
+        pattern = os.path.join(dossier_hdd, f"*_{vis}_*.jpg")
+        fichiers = glob.glob(pattern)
+
+        if not fichiers:
+            print("[UI] Erreur : BDD trouvée mais images purgées du disque dur.")
+            return
+        
+        lot_reconstruit = []
+
+        for f in fichiers:
+            nom_fichier = os.path.basename(f)
+            detail = nom_fichier.split('_')
+            cam_id, veh, mot = detail[0], detail[1], detail[2]
+            chaine = detail[-1].split(".")[0]
+            score_factice = 0.0 if "0" in chaine else 100.0
+            
+            lot_reconstruit.append({
+                "vis": vis, "vehicule": veh, "motorisation": mot,
+                "camera_source": int(cam_id), "timestamp": int(timestamp),
+                "image_hdd_path": f, "image": "", 
+                "resultats_vision": [{"numero_zone": "0", "score": score_factice}] 
+            })
+
+        self.mode_recherche = True
+        self.btn_retour_direct.pack(side="left", padx=20) 
+        self.afficher_nouveau_vehicule(lot_reconstruit)
+        self.bandeau_alerte.config(text=f"MODE ARCHIVE (Analyse en arrière plan activée)", bg="#d82121")
+
+    def retour_au_direct(self):
+        self.mode_recherche = False
+        self.btn_retour_direct.pack_forget()
+
+        if self.historique_vehicules:
+            self.index_historique = len(self.historique_vehicules) - 1
+            self.afficher_nouveau_vehicule(self.historique_vehicules[self.index_historique])
+        print("[UI] Retour au visionnage en direct.")
 

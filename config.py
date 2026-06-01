@@ -111,6 +111,7 @@ class Config:
     CAM = [{
         "NUMERO" : 1,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Ecran sous moteur D"
         }]
     """
@@ -118,68 +119,81 @@ class Config:
         {
         "NUMERO" : 2,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Ecran sous moteur G"
         },
         {
         "NUMERO" : 3,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Deflecteur AVD sous plancher (EH)"
         },
         {
         "NUMERO" : 4,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Déflecteur AVD sous plancher (EM)"
         },
         {
         "NUMERO" : 5,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Deflecteur ARD sous reservoir"
         },
         {
         "NUMERO" : 6,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Defelcteur AVD sous plancher (IH)"
         },
         {
         "NUMERO" : 7,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Deflecteur AVD sous plancher (IB)"
         },
         {
         "NUMERO" : 8,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Deflecteur AVG sous plancher (IH)"
         },
         {
         "NUMERO" : 9,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Deflecteur AVG sous plancher (IB)"
         },
         {
         "NUMERO" : 10,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Deflecteur AVG sous plancher (EH)"
         },
         {
         "NUMERO" : 11,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Deflecteur AVG sous plancher (EM)"
         },
         {
         "NUMERO" : 12,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Deflecteur ARG sous reservoir"
         }
         ,
         {
         "NUMERO" : 13,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Protecteur D / Train AR"
         }
         ,
         {
         "NUMERO" : 14,
         "TYPE" : False,
+        "ACTIVE" : True,
         "NOM" : "Protecteur G / Train AR"
         }
         """
@@ -201,6 +215,8 @@ class Config:
     AUTOMATE_DB_ENVOIE = 105
     AUTOMATE_RACK = 0
     AUTOMATE_SLOT = 1
+
+    PASSWORD = "ing" # permet d'accéder à la partie modification de zones, modif des données et autre
 
     MAPPING_VEHICULE = {
         "006" : { "VEHICULE" : "P51", "MOTORISATION" : "ICE"},
