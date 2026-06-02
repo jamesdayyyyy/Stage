@@ -104,8 +104,19 @@ class ApplicationTkinter:
         self.lbl_date.pack(side="right", padx=10, pady=5)
 
         # --- INTÉGRATION DU HELPER AFFICHAGE ---
+        canvas_container = tk.Frame(image_frame, bg="black")
+        canvas_container.pack(fill="both", expand=True)
+
         self.canvas = Canvas_interactif(image_frame, self.db, self.csv_helper, app = self, max_size=(1200, 800))
-        self.canvas.pack(fill="both", expand=True)
+
+        scroll_y = ttk.Scrollbar(canvas_container, orient="vertical", command=self.canvas.yview)
+        scroll_y.pack(side="right", fill="y")
+        
+        scroll_x = ttk.Scrollbar(canvas_container, orient="horizontal", command=self.canvas.xview)
+        scroll_x.pack(side="bottom", fill="x")
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.canvas.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
 
         # CONTRÔLES NAVIGATION
         nav_frame = tk.Frame(image_frame, bg="black")

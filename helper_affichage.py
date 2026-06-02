@@ -146,6 +146,8 @@ class Canvas_interactif(tk.Canvas):
         self.dessiner_zones()
         self.tag_raise("zone_rect")
         self.tag_raise("zone_text")
+
+        self.config(scrollregion=(0, 0, max(self.canvas_w, new_w), max(self.canvas_h, new_h)))
         
     def obtenir_scores_db(self):
         scores_dict = {}
