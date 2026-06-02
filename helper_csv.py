@@ -44,7 +44,7 @@ class ZoneConfigHelper:
     def sauvegarder_nouvelle_zone(self, vehicule, motorisation, camera_id, zone_id, x0, y0, x1, y1, type_zone = None, nom_vissage = "Inconnu"):
         chemin_csv = self._obtenir_chemin_csv(vehicule, motorisation)
         fichier_existe = os.path.exists(chemin_csv)
-        colonnes = ["numero_camera", "numero_zone", "x0", "y0", "x1", "y1", "type"]
+        colonnes = ["numero_camera", "numero_zone", "x0", "y0", "x1", "y1", "type", "nom_vissage"]
 
         try:
             with open(chemin_csv, mode='a', newline='', encoding='utf-8') as f:
@@ -55,11 +55,35 @@ class ZoneConfigHelper:
                 writer.writerow({
                     "numero_camera": camera_id,
                     "numero_zone": zone_id,
-                    "nom_visage" : nom_vissage,
+                    "nom_vissage" : nom_vissage,
                     "x0": x0, "y0": y0, "x1": x1, "y1": y1,
                     "type": type_zone
                 })
             return True
         except Exception as e:
             print(f"[CSV Helper] Erreur d'écriture : {e}")
+            return False
+    
+    def supprimer_zone(self, vehicule, motorisation,camera_id, zone_id):
+        chemin_csv = self._obtenir_chemin_csv(vehicule, motorisation)
+        if not os.path.exists(chemin_csv):
+            return False
+        zones_restantes = []
+        entetes = None 
+
+        try:
+            with open(chemin_csv, mode='r', newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                entetes = reader.fieldnames
+                for row in reader:
+                    if not (str(row["numero_camera"]) == str(camera_id) and str(row["numero_zone"]) == str(zone_id)):
+                        zones_restantes.append(row)
+                if entetes:
+                    with open(chemin_csv, mode='w', newline = '', encoding='utf-8') as f:
+                        writer = csv.DictWriter(f, fieldnames=entetes)
+                        writer.writeheader()
+                        writer.writerows(zones_restantes)
+                        return True
+        except Exception as e:
+            print(f"[CSV Helper] Erreur lors de la suppression : {e}")
             return False

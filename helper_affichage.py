@@ -14,6 +14,7 @@ import cv2
 import sqlite3
 from config import Config
 import numpy as np
+import glob
 
 class Canvas_interactif(tk.Canvas):
     def __init__(self, parent, db, csv_helper, app = None, max_size = (800,600), **kwargs):
@@ -44,7 +45,29 @@ class Canvas_interactif(tk.Canvas):
         self.bind("<ButtonPress-1>", self.on_press)
         self.bind("<B1-Motion>", self.on_drag)
         self.bind("<ButtonRelease-1>", self.on_release)
-        
+        self.bind('<Button-3>', self.on_right_click)
+    
+    def obtenir_zone_sous_clic(self, orig_x, orig_y):
+        zones_existantes = self.csv_helper.lire_zones(self.vehicule, self.motorisation, self.camera)
+        scores = self.obtenir_scores_db()
+        for z in zones_existantes:
+            if z.get("type", "") not in [self.type_ecran, "none", "None", ""]:
+                continue
+            z_id = str(z["numero_zone"])
+            data_score = scores.get(z_id)
+            match_x = data_score.get("match_x") if data_score else None
+            match_y = data_score.get("match_y") if data_score else None
+
+            largeur = int(z['x1']) - int(z['x0'])
+            hauteur = int(z['y1']) - int(z['y0'])
+
+            if match_x is not None and match_y is not None:
+                if match_x < orig_x < match_x + largeur and match_y < orig_y < match_y + hauteur:
+                    return z_id, match_x, match_y, match_x + largeur, match_y + hauteur, z.get("type", "")
+            if int(z['x0']) < orig_x < int(z['x1']) and int(z['y0']) < orig_y < int(z['y1']):
+                return z_id, int(z['x0']), int(z['y0']), int(z['x1']), int(z['y1']), z.get("type", "")
+            return None
+                
     def on_resize(self,event):
         if event.width > 5 and event.height > 5:
             self.canvas_h = event.height
@@ -63,7 +86,6 @@ class Canvas_interactif(tk.Canvas):
             self.type_ecran = detail[3]
             self.vis = detail[4]
             self.controle = detail[5].split(".")[0]
-            return True
                 
         elif len(detail) == 5:
             self.camera = detail[0]
@@ -72,11 +94,21 @@ class Canvas_interactif(tk.Canvas):
             self.vis = detail[3]
             self.controle = detail[4].split(".")[0]
             self.type_ecran = ""
-            return True
         
         else:
             print("Erreur : nomination fichier incorrect")
             return False
+        
+        besoin_check = False
+        for cam in Config.CAM:
+            if str(cam["NUMERO"]) == str(self.camera):
+                besoin_check = cam.get("TYPE", False)
+                break
+        if not besoin_check:
+            self.type_ecran = ""
+
+        return True 
+
                     
     def charger_image(self,path):
         if not os.path.exists(path):
@@ -216,10 +248,19 @@ class Canvas_interactif(tk.Canvas):
             self.action_ajouter_reference()
             
 
-    def _get_target_directory(self):
+    def _get_target_directory(self, type_zone=None):
         base_dir = f"{Config.REF_PATH}/{self.vehicule}_{self.motorisation}"
-        if self.type_ecran == "":  return base_dir
-        else : return os.path.join(base_dir, self.type_ecran)                    
+        
+        if type_zone is not None:
+            if type_zone in ["none", "None", ""]:
+                return base_dir
+            else:
+                return os.path.join(base_dir, type_zone)
+                
+        if self.type_ecran in ["none", "None", ""]:
+            return base_dir
+        else:
+            return os.path.join(base_dir, self.type_ecran)              
 
     def action_creer_zone(self):
         h_orig, w_orig = self.image_originale_cv.shape[:2]
@@ -296,71 +337,49 @@ class Canvas_interactif(tk.Canvas):
         self.charger_image(self.image_path)
             
     def action_ajouter_reference(self):
-        # 1. Coordonnées du clic simple converties en pixels originaux
         orig_x = int((self.start_x - self.offset_x) / self.ratio)
         orig_y = int((self.start_y - self.offset_y) / self.ratio)
     
-        zones_existantes = self.csv_helper.lire_zones(self.vehicule, self.motorisation, self.camera)
-        scores = self.obtenir_scores_db()
-
-        for z in zones_existantes:
-            z_id = str(z["numero_zone"])
-            data_score = scores.get(z_id)
-            match_x = data_score.get("match_x") if data_score else None
-            match_y = data_score.get("match_y") if data_score else None
-            largeur = int(z['x1']) - int(z['x0'])
-            hauteur = int(z['y1']) - int(z['y0'])
-
-            if match_x and match_y:
-                x0_clic_cible = match_x
-                y0_clic_cible = match_y
-                x1_clic_cible = match_x + largeur
-                y1_clic_cible = match_y + hauteur
-            else:
-                x0_clic_cible = int(z['x0'])
-                y0_clic_cible = int(z['y0'])
-                x1_clic_cible = int(z['x1'])
-                y1_clic_cible = int(z['y1'])
-
-            if z["type"] == self.type_ecran and x0_clic_cible < orig_x < x1_clic_cible and y0_clic_cible < orig_y < y1_clic_cible :
-                if messagebox.askquestion("Ajouter Référence", f"Ajouter image de référence pour la zone {z['numero_zone']} ?") == "yes":
+        resultat_clic = self.obtenir_zone_sous_clic(orig_x, orig_y)
+        if resultat_clic:
+            z_id, x0_reel, y0_reel, x1_reel, y1_reel, z_type = resultat_clic
+            if messagebox.askquestion("Ajouter Référence", f"Ajouter image de référence pour la zone {z_id} ?") == "yes":
+                cropped_img = self.image_originale_cv[y0_reel:y1_reel, x0_reel:x1_reel]
+                target_dir = self._get_target_directory(z_type)
+                os.makedirs(target_dir, exist_ok=True)
                     
-                    cropped_img = self.image_originale_cv[y0_clic_cible:y1_clic_cible, x0_clic_cible:x1_clic_cible]
-                    target_dir = self._get_target_directory()
-                    os.makedirs(target_dir, exist_ok=True)
-                    
-                    path_pattern = os.path.join(target_dir, f"zone_{z['numero_zone']}_%s.jpg")
-                    i = 1
-                    while os.path.exists(path_pattern % i): 
-                        i += 1
+                path_pattern = os.path.join(target_dir, f"zone_{z_id}_%s.jpg")
+                i = 1
+                while os.path.exists(path_pattern % i): 
+                    i += 1
                         
-                    cv2.imwrite(path_pattern % i, cropped_img)
+                cv2.imwrite(path_pattern % i, cropped_img)
                 
-                    # Tracer dans la DB
-                    self.db.add_reference_to_db(self.vis, self.vehicule, self.camera, z['numero_zone'])
-                    print(f"[Canvas] Référence ajoutée pour Zone {z['numero_zone']}")
+                # Tracer dans la DB
+                self.db.add_reference_to_db(self.vis, self.vehicule, self.camera, z_id)
+                print(f"[Canvas] Référence ajoutée pour Zone {z_id}")
 
-                    if self.app and self.app.infos_vehicule_actuel:
-                        for info_cam in self.app.infos_vehicule_actuel:
-                            if str(info_cam["camera_source"]) == str(self.camera):
-                                for res in info_cam.get("resultats_vision", []):
-                                    if str(res["numero_zone"]) == str(z['numero_zone']):
-                                        res["score"] = 100.0
-                        self.app.mettre_a_jour_couleurs_boutons()
+                if self.app and self.app.infos_vehicule_actuel:
+                    for info_cam in self.app.infos_vehicule_actuel:
+                        if str(info_cam["camera_source"]) == str(self.camera):
+                            for res in info_cam.get("resultats_vision", []):
+                                if str(res["numero_zone"]) == str(z_id):
+                                    res["score"] = 100.0
+                    self.app.mettre_a_jour_couleurs_boutons()
 
-                    self.delete(f"zone_{z['numero_zone']}")
+                self.delete(f"zone_{z_id}")
 
-                    x0 = int(x0_clic_cible * self.ratio) + self.offset_x
-                    y0 = int(y0_clic_cible * self.ratio) + self.offset_y
-                    x1 = int(x1_clic_cible * self.ratio) + self.offset_x
-                    y1 = int(y1_clic_cible * self.ratio) + self.offset_y
+                x0 = int(x0_reel * self.ratio) + self.offset_x
+                y0 = int(y0_reel * self.ratio) + self.offset_y
+                x1 = int(x1_reel * self.ratio) + self.offset_x
+                y1 = int(y1_reel * self.ratio) + self.offset_y
                 
-                    couleur = "#00ff00"
-                    texte = f"Zone {z_id} : 100%"
+                couleur = "#00ff00"
+                texte = f"Zone {z_id} : 100%"
 
-                    self.create_rectangle(x0, y0, x1, y1, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",))
-                    self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',))
-                return
+                self.create_rectangle(x0, y0, x1, y1, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",))
+                self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',))
+            return
             
             
     def obtenir_prochain_id_zone(self, vehicule, motorisation, type_actuel):
@@ -424,3 +443,25 @@ class Canvas_interactif(tk.Canvas):
 
         self.wait_window(fenetre)
         return resultat["nom"]
+    
+    def on_right_click(self, event):
+        orig_x = int((self.canvasx(event.x) - self.offset_x) / self.ratio)
+        orig_y = int((self.canvasy(event.y) - self.offset_y) / self.ratio)
+        resultat_clic = self.obtenir_zone_sous_clic(orig_x, orig_y)
+        if resultat_clic:
+            z_id, _, _, _, _, z_type = resultat_clic
+            if messagebox.askyesno("Supprimer la zone", f"Voulez-vous vraiment supprimer définitivement la Zone {z_id} ?\n\nCela effacera également toutes ses images de référence."):
+                self.csv_helper.supprimer_zone(self.vehicule, self.motorisation, self.camera, z_id)
+                target_dir = self._get_target_directory(z_type)
+                pattern = os.path.join(target_dir, f"zone_{z_id}_*.jpg")
+                fichiers_ref = glob.glob(pattern)
+                
+                for f in fichiers_ref:
+                    try:
+                        os.remove(f)
+                    except Exception as e:
+                        print(f"[Canvas] Impossible de supprimer {f} : {e}")
+
+                print(f"[Canvas] Zone {z_id} supprimée avec succès (CSV et {len(fichiers_ref)} image(s) effacée(s)).")
+                
+                self.rafraichir_image()

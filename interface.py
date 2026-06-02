@@ -33,6 +33,7 @@ class ApplicationTkinter:
         self.historique_vehicules = []
         self.index_historique = -1
         self.mode_recherche = False
+        self.fenetre_recherche = None
         
         # État de la visualisation
         self.infos_vehicule_actuel = []
@@ -75,12 +76,12 @@ class ApplicationTkinter:
         cam_frame = tk.LabelFrame(menu, text="Caméras", bg="#2b2b2b", fg="white", font=("Arial", 10, "bold"))
         cam_frame.pack(fill="both", expand=True, padx=8, pady=8)
 
-        self.boutons_cameras = []
+        self.boutons_cameras = {}
 
         for index, cam_data in enumerate(Config.CAM):
             btn = tk.Button(
                 cam_frame,
-                text=f"{cam_data["NUMERO"]} : {cam_data["NOM"]}",
+                text= f"{cam_data['NUMERO']} : {cam_data['NOM']}",
                 anchor="w", bg="#eeeeee", fg="#222222", relief="flat",
                 command=lambda i=index: self.change_image_by_index(i)
             )
@@ -110,8 +111,8 @@ class ApplicationTkinter:
         nav_frame = tk.Frame(image_frame, bg="black")
         nav_frame.pack(fill="x", side="bottom", pady=5)
         
-        tk.Button(nav_frame, text="◀ Caméra Précédente", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_precedent).pack(side="left", padx=20)
-        tk.Button(nav_frame, text="Caméra Suivante ▶", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_suivant).pack(side="right", padx=20)
+        self.btn_prec = tk.Button(nav_frame, text="◀ Caméra Précédente", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_precedent).pack(side="left", padx=20)
+        self.btn_next = tk.Button(nav_frame, text="Caméra Suivante ▶", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_suivant).pack(side="right", padx=20)
         self.btn_retour_direct = tk.Button(nav_frame, text="RETOUR AU DIRECT", font=("Arial", 12, "bold"), bg="#e74c3c", fg="white", command=self.retour_au_direct)
 
     def process_queue(self):
@@ -168,6 +169,7 @@ class ApplicationTkinter:
                     zones_nok.append(nom_defaut)
         if erreur_systeme:
             vehicule_est_ok = False
+        """"
         try:
             automate = Automate(Config.AUTOMATE_IP, Config.AUTOMATE_DB_ENVOIE, Config.AUTOMATE_RACK, Config.AUTOMATE_SLOT)
             automate.envoyer_resultats(vehicule_est_ok, zones_nok, erreur_systeme)
@@ -176,7 +178,7 @@ class ApplicationTkinter:
                 
         except Exception as e:
             print(f"[UI/Automate] Erreur lors de l'envoi des résultats à l'automate : {e}")
-                
+        """
         self.root.after(0, lambda lot=infos_traitees: self.ajouter_historique_et_afficher(lot))
 
     def afficher_nouveau_vehicule(self, lot_infos):
@@ -212,7 +214,13 @@ class ApplicationTkinter:
         info_cam = self.infos_vehicule_actuel[self.current_index]
         
         chemin_ram = info_cam.get("image", "")
-        nom_fichier = os.path.basename(chemin_ram)
+        chemin_hdd = info_cam.get("image_hdd_path", "")
+
+        if chemin_ram and os.path.exists(chemin_ram):
+            nom_fichier = os.path.basename(chemin_ram)
+        elif chemin_hdd and os.path.exists(chemin_hdd):
+            nom_fichier = os.path.basename(chemin_hdd)
+        else : nom_fichier = "Image introuvable"
         
         date_obj = datetime.fromtimestamp(info_cam["timestamp"])
         date_str = date_obj.strftime("%d/%m/%Y - %H:%M:%S")
@@ -290,22 +298,32 @@ class ApplicationTkinter:
             cam_id = info_cam["camera_source"]
             camera_defaut = False 
             for res in info_cam.get("resultats_vision", []):
-                if float(res.get("score"), 0.0) < Config.SCORE_SEUIL:
+                if float(res.get("score", 0.0)) < Config.SCORE_SEUIL:
                     camera_defaut = True
                     break
-                if cam_id in self.boutons_cameras:
-                    if camera_defaut:
-                        self.boutons_cameras[cam_id].config(bg="#ff4d3d", fg="white")
+            if cam_id in self.boutons_cameras:
+                if camera_defaut:
+                    self.boutons_cameras[cam_id].config(bg="#ff4d3d", fg="white")
 
     def ouvrir_gestionnaire(self):
-        fenetre = tk.Toplevel(self.root)
-        fenetre.title("Gestionnaire de Fichiers / Archives")
-        fenetre.geometry("700x400")
-        fenetre.grab_set() # Empêche de cliquer derrière
-        fenetre.config(bg="#2b2b2b")
+        if self.fenetre_recherche is not None and tk.Toplevel.winfo_exists(self.fenetre_recherche):
+            self.fenetre_recherche.deiconify()
+            self.fenetre_recherche.lift()
+            self.fenetre_recherche.focus_force()
+            return
+        
+        self.fenetre_recherche = tk.Toplevel(self.root)
+        self.fenetre_recherche.title("Gestionnaire de Fichiers / Archives")
+        self.fenetre_recherche.geometry("900x400")
+        self.fenetre_recherche.grab_set() # Empêche de cliquer derrière
+        self.fenetre_recherche.config(bg="#2b2b2b")
+
+        def on_close_gestionnaire():
+            self.fenetre_recherche.destroy()
+            self.fenetre_recherche = None
 
         # --- Champs de recherche ---
-        search_frame = tk.Frame(fenetre, bg="#2b2b2b")
+        search_frame = tk.Frame(self.fenetre_recherche, bg="#2b2b2b")
         search_frame.pack(fill="x", padx=10, pady=10)
 
         tk.Label(search_frame, text="VIS :", bg="#2b2b2b", fg="white").grid(row=0, column=0, padx=5)
@@ -321,7 +339,7 @@ class ApplicationTkinter:
         ent_mot.grid(row=0, column=5, padx=5)
 
         colonnes = ("VIS", "Véhicule", "Motorisation", "Date & Heure", "Timestamp")
-        tree = ttk.Treeview(fenetre, columns=colonnes, show="headings")
+        tree = ttk.Treeview(self.fenetre_recherche, columns=colonnes, show="headings")
         for col in colonnes:
             tree.heading(col, text = col)
             if col == "Timestamp":
@@ -346,7 +364,7 @@ class ApplicationTkinter:
             valeurs = tree.item(selection[0], "values")
             vis, timestamp = valeurs[0], valeurs[4]
             self.charger_vehicule_archive(vis, timestamp)
-            fenetre.destroy()
+            on_close_gestionnaire()
 
         tree.bind("<Double-1>", on_double_click)
         lancer_recherche()
@@ -379,12 +397,16 @@ class ApplicationTkinter:
 
         self.mode_recherche = True
         self.btn_retour_direct.pack(side="left", padx=20) 
+        self.btn_prev.pack_forget()
+        self.btn_next.pack_forget()
         self.afficher_nouveau_vehicule(lot_reconstruit)
         self.bandeau_alerte.config(text=f"MODE ARCHIVE (Analyse en arrière plan activée)", bg="#d82121")
 
     def retour_au_direct(self):
         self.mode_recherche = False
         self.btn_retour_direct.pack_forget()
+        self.btn_prev.pack(side="left", padx=10)
+        self.btn_next.pack(side="left", padx=10)
 
         if self.historique_vehicules:
             self.index_historique = len(self.historique_vehicules) - 1
