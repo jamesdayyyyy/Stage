@@ -214,6 +214,10 @@ class Canvas_interactif(tk.Canvas):
                         self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',))
         
     def on_press(self, event):
+        if self.app and not self.app.mode_admin:
+            messagebox.showwarning("Verrouillé", "Activez le mode modification pour interagir.")
+            return
+        
         if not self.image_path:
              return
         self.start_x, self.start_y = self.canvasx(event.x), self.canvasy(event.y)
@@ -447,6 +451,9 @@ class Canvas_interactif(tk.Canvas):
         return resultat["nom"]
     
     def on_right_click(self, event):
+        if self.app and not self.app.mode_admin:
+            messagebox.showwarning("Verrouillé", "Activez le mode modification pour supprimer une zone.")
+            return
         orig_x = int((self.canvasx(event.x) - self.offset_x) / self.ratio)
         orig_y = int((self.canvasy(event.y) - self.offset_y) / self.ratio)
         resultat_clic = self.obtenir_zone_sous_clic(orig_x, orig_y)

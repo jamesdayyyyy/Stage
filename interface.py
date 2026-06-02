@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, simpledialog, messagebox
 import os
 import queue
 import concurrent.futures
@@ -34,6 +34,7 @@ class ApplicationTkinter:
         self.index_historique = -1
         self.mode_recherche = False
         self.fenetre_recherche = None
+        self.mode_admin = False
         
         # État de la visualisation
         self.infos_vehicule_actuel = []
@@ -71,6 +72,9 @@ class ApplicationTkinter:
                 
         btn_recherche = tk.Button(menu, text="Recherche véhicule", bg="#2b2b2b", fg="white", font=("Arial", 10, "bold"), command=self.ouvrir_gestionnaire)
         btn_recherche.pack(fill="x", padx=8, pady=10)
+
+        self.btn_admin = tk.Button(menu, text="Modifs : OFF", bg="#e74c3c", fg="white", font=("Arial", 10, "bold"), command=self.toggle_admin)
+        self.btn_admin.pack(fill="x", padx=8, pady=5)
 
         # ZONE CAMERAS
         cam_frame = tk.LabelFrame(menu, text="Caméras", bg="#2b2b2b", fg="white", font=("Arial", 10, "bold"))
@@ -125,6 +129,20 @@ class ApplicationTkinter:
         self.btn_prec = tk.Button(nav_frame, text="◀ Caméra Précédente", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_precedent).pack(side="left", padx=20)
         self.btn_next = tk.Button(nav_frame, text="Caméra Suivante ▶", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_suivant).pack(side="right", padx=20)
         self.btn_retour_direct = tk.Button(nav_frame, text="RETOUR AU DIRECT", font=("Arial", 12, "bold"), bg="#e74c3c", fg="white", command=self.retour_au_direct)
+
+    def toggle_admin(self):
+        if self.mode_admin:
+            self.mode_admin = False
+            self.btn_admin.config(text="Modifs : OFF", bg="#e74c3c")
+            print("[UI] Mode Modification verrouillé.")
+        else:
+            mdp = simpledialog.askstring("Authentification", "Entrez le mot de passe pour modifier :", show="*")
+            if mdp == Config.PASSWORD:
+                self.mode_admin = True
+                self.btn_admin.config(text="Modifs : ON", bg="#2ecc71")
+                print("[UI] Mode Modification déverrouillé.")
+            elif mdp is not None:
+                messagebox.showerror("Erreur", "Mot de passe incorrect.")
 
     def process_queue(self):
         """Vérifie si de nouvelles images sont arrivées de vision.py."""
