@@ -200,7 +200,7 @@ class Config:
     
     DATABASE_PATH = "./historique_production.db"
     TEMPORAIRE_PATH = "/dev/shm"
-    HDD_PATH = ""
+    HDD_PATH = "."
     ZONES_CSV_PATH = "./zones"
     REF_PATH = "./ref"
     

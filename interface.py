@@ -53,9 +53,9 @@ class ApplicationTkinter:
         self.header.pack(pady=5)
 
         # BANDEAU ALERTE 
-        self.bandeau_alerte = tk.Label(self.root, text="ATTENTION : VOUS CONSULTEZ UN ANCIEN VEHICULE", bg="#e74c3c", fg="white", font=("Arial", 14, "bold"))
+        self.bandeau_alerte = tk.Label(self.root, text="ATTENTION : VOUS CONSULTEZ UN ANCIEN VEHICULE", bg="orange", fg="white", font=("Arial", 14, "bold"))
 
-        self.bandeau_disque = tk.Label(self.root, text="", bg="orange", fg="white", font=("Arial", 14, "bold"))
+        self.bandeau_disque = tk.Label(self.root, text="", bg="#e74c3c", fg="white", font=("Arial", 14, "bold"))
         # MAIN
         main_frame = tk.Frame(self.root)
         main_frame.pack(fill="both", expand=True)
@@ -172,7 +172,7 @@ class ApplicationTkinter:
                         self.bandeau_disque.pack(fill="x", after= self.header)
 
                 elif free_gb < seuil_alerte_gb:
-                    self.bandeau_disque.config(text=f"ALERTE : Plus que {free_gb:.1f} Go d'espace sur le disque ({Config.HDD_PATH}) ! Arrêt système dans  ")
+                    self.bandeau_disque.config(text=f"ALERTE : Plus que {free_gb:.1f} Go d'espace sur le disque dur ({Config.HDD_PATH}) ! Arrêt stockage dans {free_gb - 0.244} Go")
                     self.bandeau_disque.pack(fill="x", after=self.header)
                 else:
                     self.bandeau_disque.pack_forget()
@@ -285,7 +285,7 @@ class ApplicationTkinter:
         
         for index, cam_data in enumerate(Config.CAM):
             if cam_data["NUMERO"] == info_cam["camera_source"]:
-                self.header.config(text=f"Caméra {cam_data["NUMERO"]}: {cam_data['NOM']}")
+                self.header.config(text=f"Caméra {cam_data['NUMERO']}: {cam_data['NOM']}")
                 break
             
         self.lbl_filename.config(text=f"Fichier: {nom_fichier}")
@@ -455,7 +455,7 @@ class ApplicationTkinter:
 
         self.mode_recherche = True
         self.btn_retour_direct.pack(side="left", padx=20) 
-        self.btn_prev.pack_forget()
+        self.btn_prec.pack_forget()
         self.btn_next.pack_forget()
         self.afficher_nouveau_vehicule(lot_reconstruit)
         self.bandeau_alerte.config(text=f"MODE ARCHIVE (Analyse en arrière plan activée)")
@@ -463,8 +463,8 @@ class ApplicationTkinter:
     def retour_au_direct(self):
         self.mode_recherche = False
         self.btn_retour_direct.pack_forget()
-        self.btn_prev.pack(side="left", padx=10)
-        self.btn_next.pack(side="left", padx=10)
+        self.btn_prec.pack(side="left", padx=10)
+        self.btn_next.pack(side="right", padx=10)
         self.bandeau_alerte.config(text="ATTENTION : VOUS CONSULTEZ UN ANCIEN VEHICULE")
 
         if self.historique_vehicules:
