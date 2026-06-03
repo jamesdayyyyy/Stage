@@ -235,12 +235,10 @@ class Canvas_interactif(tk.Canvas):
     def on_release(self, event):
         if not self.image_path or not self.start_x: return
         
-        # Différencier un "Clic simple" d'un "Glisser-déposer" (seuil de 10 pixels)
         mouvement_x = abs(self.start_x - self.end_x) if self.end_x else 0
         mouvement_y = abs(self.start_y - self.end_y) if self.end_y else 0
         
         if mouvement_x > 10 and mouvement_y > 10:
-            #CRÉATION DE ZONE
             if messagebox.askquestion("Ajouter", "Ajouter une nouvelle zone irréversible ?") == "yes": 
                 self.action_creer_zone()
             else:
@@ -248,7 +246,6 @@ class Canvas_interactif(tk.Canvas):
                 self.rect = None 
                 self.end_x = self.end_y = None
         else:
-            #AJOUT DE RÉFÉRENCE (Clic simple)
             self.delete(self.rect)
             self.rect = None 
             self.end_x = self.end_y = None

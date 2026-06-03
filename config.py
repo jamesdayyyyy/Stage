@@ -239,8 +239,8 @@ class Config:
         "00" : {"NOM" : "Sans", "TYPE" : "00"},
         "01" : {"NOM" : "Ecran tole", "TYPE" : "01"},
         "13" : {"NOM" : "Ecran tole", "TYPE" : "01"},
-
     }
+
     NOM_VIS = ["Deflecteur ARG sous reservoir",
                "Deflecteur AIR AVG sous plancher",
                "Ecran sous moteur / berceau",
@@ -252,6 +252,3 @@ class Config:
                "Protecteur D / Train AR",
                "Deflecteur AR",
                "Deflecteur sous chargeur"]
-    
-
-    
