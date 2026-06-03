@@ -238,7 +238,11 @@ class Config:
     MAPPING_ECRAN = {
         "00" : {"NOM" : "Sans", "TYPE" : "00"},
         "01" : {"NOM" : "Ecran tole", "TYPE" : "01"},
+        "10" : {"NOM" : "Deflecteur", "TYPE" : "10"},
+        "11" : {"NOM" : "Deflecteur", "TYPE" : "10"},
         "13" : {"NOM" : "Ecran tole", "TYPE" : "01"},
+        "14" : {"NOM" : "Deflecteur", "TYPE" : "10"}
+
     }
 
     NOM_VIS = ["Deflecteur ARG sous reservoir",

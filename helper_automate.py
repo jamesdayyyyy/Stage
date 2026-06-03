@@ -40,13 +40,17 @@ class Automate:
                 code_moteur, 
                 {"VEHICULE": "Inconnu", "MOTORISATION": code_moteur}
                 )
+            info_type_ecran = Config.MAPPING_ECRAN.get(
+                type_ecran,
+                {"NOM" : "Deflecteur", "TYPE" : "10"}
+            )
 
             return {
                 "vh_dans_pas" : vh_dans_pas,
                 "vis" : vis,
                 "vehicule" : info_traduite.get("VEHICULE", "Inconnu"),
                 "motorisation" : info_traduite.get("MOTORISATION", "Inconnu"),
-                "type_ecran" : type_ecran
+                "type_ecran" : info_type_ecran.get("TYPE", "10")
                 }
         
         except Exception as e:
