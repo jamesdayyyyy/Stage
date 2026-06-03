@@ -5,6 +5,7 @@ import queue
 import concurrent.futures
 from datetime import datetime
 import glob
+import shutil
 
 from config import Config
 from helper_database import Database
@@ -23,10 +24,8 @@ class ApplicationTkinter:
         self.csv_helper = ZoneConfigHelper()
         self.cache_ram = GestionnaireRAM(nb_voitures_en_cache=Config.CACHE_LIMIT)
         
-        # Thread pool pour l'écriture disque/DB sans bloquer l'interface
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
         
-        # Gestion des lots (Attendre le bon nombre de photos)
         self.nombre_cams_attendu = len(Config.CAM)
         self.buffer_vehicules = {}
 
@@ -36,15 +35,16 @@ class ApplicationTkinter:
         self.fenetre_recherche = None
         self.mode_admin = False
         
-        # État de la visualisation
+        self.disque_critique = False
+
         self.infos_vehicule_actuel = []
         self.current_index = 0
         self.zoom_factor = 1.0
 
         self.setup_ui()
         
-        # Lancement de la boucle d'écoute de la Queue
         self.root.after(100, self.process_queue)
+        self.verifier_espace_disque()
 
     def setup_ui(self):
         """Construction de l'interface graphique."""
@@ -55,6 +55,7 @@ class ApplicationTkinter:
         # BANDEAU ALERTE 
         self.bandeau_alerte = tk.Label(self.root, text="ATTENTION : VOUS CONSULTEZ UN ANCIEN VEHICULE", bg="orange", fg="white", font=("Arial", 14, "bold"))
 
+        self.bandeau_disque = tk.Label(self.root, text="", bg="orange", fg="white", font=("Arial", 14, "bold"))
         # MAIN
         main_frame = tk.Frame(self.root)
         main_frame.pack(fill="both", expand=True)
@@ -157,6 +158,29 @@ class ApplicationTkinter:
         finally:
             self.root.after(100, self.process_queue)
 
+    def verifier_espace_disque(self):
+        try:
+            if os.path.exists(Config.HDD_PATH):
+                total, used, free = shutil.disk_usage(Config.HDD_PATH)
+                free_gb = free / (1024 ** 3)  
+                seuil_alerte_gb = 10.0 
+                if free_gb < 0.244:
+                    if not self.disque_critique:
+                        self.disque_critique = True
+                        print("[Alerte] Disque dur plein, les contrôles continuent mais sans sauvegarde d'images")
+                        self.bandeau_disque.config(text="MODE DEGRADE : Disque dur plein. Les contrôles continuent mais sans sauvegarde d'images")
+                        self.bandeau_disque.pack(fill="x", after= self.header)
+                        
+                elif free_gb < seuil_alerte_gb:
+                    self.bandeau_disque.config(text=f"ALERTE : Plus que {free_gb:.1f} Go d'espace sur le disque ({Config.HDD_PATH}) ! Arrêt système dans  ")
+                    self.bandeau_disque.pack(fill="x", after=self.header)
+                else:
+                    self.bandeau_disque.pack_forget()
+        except Exception as e:
+            print(f"[UI Erreur] Impossible de vérifier l'espace disque: {e}")
+            
+        self.root.after(300000, self.verifier_espace_disque) #relance apres 5 min
+
     def gerer_reception_image(self, info_vehicule):
         """Regroupe les images par vis pour attendre le lot complet."""
         vis = info_vehicule["vis"]
@@ -183,12 +207,16 @@ class ApplicationTkinter:
         
 
         for info in lot_complet:
-            succes_stockage = traiter_stockage(info, Config.HDD_PATH, self.cache_ram)
-            
-            if not succes_stockage:
-                print(f"[UI/DB] Avertissement: Photo de Cam {info.get('camera_source')} manquante, mais historisée.")
+            if self.disque_critique:
                 info["image_hdd_path"] = ""
-                erreur_systeme = True
+                print(f"[Alerte RAM] Pas suffisament de stockage pour HDD")
+            else:
+                succes_stockage = traiter_stockage(info, Config.HDD_PATH, self.cache_ram)
+            
+                if not succes_stockage:
+                    print(f"[UI/DB] Avertissement: Photo de Cam {info.get('camera_source')} manquante, mais historisée.")
+                    info["image_hdd_path"] = ""
+                    erreur_systeme = True
 
             self.db.sauvegarder_info(info)
             infos_traitees.append(info)
@@ -227,7 +255,6 @@ class ApplicationTkinter:
             else:
                 self.bandeau_alerte.pack_forget()
 
-        # On trie la liste par numéro de caméra pour la navigation
         self.infos_vehicule_actuel = sorted(lot_infos, key=lambda x: int(x["camera_source"]))
         
         vehicule = self.infos_vehicule_actuel[0]["vehicule"]
@@ -438,6 +465,7 @@ class ApplicationTkinter:
         self.btn_retour_direct.pack_forget()
         self.btn_prev.pack(side="left", padx=10)
         self.btn_next.pack(side="left", padx=10)
+        self.bandeau_alerte.config(text="ATTENTION : VOUS CONSULTEZ UN ANCIEN VEHICULE", bg="orange")
 
         if self.historique_vehicules:
             self.index_historique = len(self.historique_vehicules) - 1
