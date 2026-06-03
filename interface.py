@@ -111,7 +111,7 @@ class ApplicationTkinter:
         canvas_container = tk.Frame(image_frame, bg="black")
         canvas_container.pack(fill="both", expand=True)
 
-        self.canvas = Canvas_interactif(image_frame, self.db, self.csv_helper, app = self, max_size=(1200, 800))
+        self.canvas = Canvas_interactif(canvas_container, self.db, self.csv_helper, app = self, max_size=(1200, 800))
 
         scroll_y = ttk.Scrollbar(canvas_container, orient="vertical", command=self.canvas.yview)
         scroll_y.pack(side="right", fill="y")
@@ -126,9 +126,11 @@ class ApplicationTkinter:
         nav_frame = tk.Frame(image_frame, bg="black")
         nav_frame.pack(fill="x", side="bottom", pady=5)
         
-        self.btn_prec = tk.Button(nav_frame, text="◀ Caméra Précédente", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_precedent).pack(side="left", padx=20)
-        self.btn_next = tk.Button(nav_frame, text="Caméra Suivante ▶", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_suivant).pack(side="right", padx=20)
+        self.btn_prec = tk.Button(nav_frame, text="◀ Véhicule Précédente", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_precedent)
+        self.btn_next = tk.Button(nav_frame, text="Véhicule Suivante ▶", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_suivant)
         self.btn_retour_direct = tk.Button(nav_frame, text="RETOUR AU DIRECT", font=("Arial", 12, "bold"), bg="#e74c3c", fg="white", command=self.retour_au_direct)
+        self.btn_next.pack(side="right", padx=20)
+        self.btn_prec.pack(side="left", padx=20)
 
     def toggle_admin(self):
         if self.mode_admin:
@@ -256,7 +258,7 @@ class ApplicationTkinter:
         
         for index, cam_data in enumerate(Config.CAM):
             if cam_data["NUMERO"] == info_cam["camera_source"]:
-                self.header.config(text=f"Véhicule: {info_cam.get('vehicule', 'Inconnu')} - Caméra: {cam_data['NOM']}")
+                self.header.config(text=f"Caméra {cam_data["NUMERO"]}: {cam_data['NOM']}")
                 break
             
         self.lbl_filename.config(text=f"Fichier: {nom_fichier}")
@@ -281,11 +283,11 @@ class ApplicationTkinter:
 
     def zoom_in(self):
         self.canvas.zoom_factor *= 1.2
-        self.canvas.rafraichir_image()
+        self.canvas.differer_rafraichissement(100)
 
     def zoom_out(self):
         self.canvas.zoom_factor *= 0.8
-        self.canvas.rafraichir_image()
+        self.canvas.differer_rafraichissement(100)
     
     def vehicule_suivant(self):
         if self.index_historique < len(self.historique_vehicules) - 1:

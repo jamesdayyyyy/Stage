@@ -37,6 +37,8 @@ class Canvas_interactif(tk.Canvas):
         self.offset_y = 0
         
         self.camera = self.vehicule = self.motorisation = self.type_ecran = self.vis = None
+
+        self.timer_rafraichissement = None
         
         self.rect = None 
         self.start_x = self.start_y = self.end_x = self.end_y = None 
@@ -73,8 +75,8 @@ class Canvas_interactif(tk.Canvas):
             self.canvas_h = event.height
             self.canvas_w = event.width
             if self.image_path:
-                self.rafraichir_image()
-            
+                self.differer_rafraichissement(150)   
+
     def extract_data(self, path):
         nom_fichier = os.path.basename(path)
         detail = nom_fichier.split("_")
@@ -108,7 +110,6 @@ class Canvas_interactif(tk.Canvas):
             self.type_ecran = ""
 
         return True 
-
                     
     def charger_image(self,path):
         if not os.path.exists(path):
@@ -474,3 +475,12 @@ class Canvas_interactif(tk.Canvas):
                 print(f"[Canvas] Zone {z_id} supprimée avec succès (CSV et {len(fichiers_ref)} image(s) effacée(s)).")
                 
                 self.rafraichir_image()
+
+    def differer_rafraichissement(self, delai=150):
+        """
+        Système Anti-Lag : Annule le précédent rafraîchissement s'il n'est pas encore exécuté, 
+        et en programme un nouveau dans 'delai' millisecondes.
+        """
+        if self.timer_rafraichissement is not None:
+            self.after_cancel(self.timer_rafraichissement)
+        self.timer_rafraichissement = self.after(delai, self.rafraichir_image)

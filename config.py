@@ -216,7 +216,7 @@ class Config:
     AUTOMATE_RACK = 0
     AUTOMATE_SLOT = 1
 
-    PASSWORD = "ing" # permet d'accéder à la partie modification de zones, modif des données et autre
+    PASSWORD = "ing" # pas secret car accéssible dans ce fichier mais enlève risque de modif accidentelle
 
     MAPPING_VEHICULE = {
         "006" : { "VEHICULE" : "P51", "MOTORISATION" : "ICE"},
@@ -235,7 +235,12 @@ class Config:
         "019" : { "VEHICULE" : "P52", "MOTORISATION" : "BEV"},
         "020" : { "VEHICULE" : "P54", "MOTORISATION" : "BEV"},
     }
+    MAPPING_ECRAN = {
+        "00" : {"NOM" : "Sans", "TYPE" : "00"},
+        "01" : {"NOM" : "Ecran tole", "TYPE" : "01"},
+        "13" : {"NOM" : "Ecran tole", "TYPE" : "01"},
 
+    }
     NOM_VIS = ["Deflecteur ARG sous reservoir",
                "Deflecteur AIR AVG sous plancher",
                "Ecran sous moteur / berceau",

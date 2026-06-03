@@ -65,7 +65,10 @@ class Automate:
         try:
             OFFSET_BOOLS = 0
             OFFSET_ARRAY = 2
-            taille_totale_db = OFFSET_ARRAY + 374
+
+            NB_MAX_DEFAUTS = 15
+            TAILLE_STRING = 34 # String de 32 chars max + 2 octets d'en tête
+            taille_totale_db = OFFSET_ARRAY + (NB_MAX_DEFAUTS * TAILLE_STRING)
 
             data = bytearray(taille_totale_db)
             if erreur_systeme:
@@ -76,8 +79,8 @@ class Automate:
                 set_bool(data, OFFSET_BOOLS, 0, False)
                 set_bool(data, OFFSET_BOOLS, 1, vehicule_ok)
                 set_bool(data, OFFSET_BOOLS, 2, not vehicule_ok)
-            for i in range(11):
-                offset_actuel = OFFSET_ARRAY + i*34
+            for i in range(NB_MAX_DEFAUTS):
+                offset_actuel = OFFSET_ARRAY + (i*TAILLE_STRING)
                 if i < len(liste_defauts) and not erreur_systeme:
                     set_string(data, offset_actuel, liste_defauts[i][:32])
                 else:
@@ -85,6 +88,7 @@ class Automate:
             self.client.db_write(Config.AUTOMATE_DB_ENVOIE, 0, data)
             print("[Automate] Données envoyées à l'automate")
             return True 
+        
         except Exception as e:
             print(f"[Erreur - Automate] Échec de l'envoi : {e}")
             self.client.disconnect()
