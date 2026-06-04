@@ -236,12 +236,12 @@ class Config:
         "020" : { "VEHICULE" : "P54", "MOTORISATION" : "BEV"},
     }
     MAPPING_ECRAN = {
-        "00" : {"NOM" : "Sans", "TYPE" : "00"},
-        "01" : {"NOM" : "Ecran tole", "TYPE" : "01"},
-        "10" : {"NOM" : "Deflecteur", "TYPE" : "10"},
-        "11" : {"NOM" : "Deflecteur", "TYPE" : "10"},
-        "13" : {"NOM" : "Ecran tole", "TYPE" : "01"},
-        "14" : {"NOM" : "Deflecteur", "TYPE" : "10"}
+        "01" : {"NOM" : "Sans", "TYPE" : "00"},
+        "02" : {"NOM" : "Ecran tole", "TYPE" : "01"},
+        "03" : {"NOM" : "Deflecteur", "TYPE" : "10"},
+        "04" : {"NOM" : "Deflecteur", "TYPE" : "10"},
+        "05" : {"NOM" : "Ecran tole", "TYPE" : "01"},
+        "06" : {"NOM" : "Deflecteur", "TYPE" : "10"}
 
     }
 

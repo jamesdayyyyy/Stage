@@ -68,7 +68,7 @@ class Canvas_interactif(tk.Canvas):
                     return z_id, match_x, match_y, match_x + largeur, match_y + hauteur, z.get("type", "")
             if int(z['x0']) < orig_x < int(z['x1']) and int(z['y0']) < orig_y < int(z['y1']):
                 return z_id, int(z['x0']), int(z['y0']), int(z['x1']), int(z['y1']), z.get("type", "")
-            return None
+        return None
                 
     def on_resize(self,event):
         if event.width > 5 and event.height > 5:
@@ -388,33 +388,41 @@ class Canvas_interactif(tk.Canvas):
             
     def obtenir_prochain_id_zone(self, vehicule, motorisation, type_actuel):
         """
-        Récupère le prochain ID de zone de manière intelligente (appariement M et C).
+        Récupère le prochain ID de zone en recyclant le plus petit ID disponible.
+        Gère l'appariement entre les différents types d'écrans (00, 01, 10...).
         """
-        # On lit toutes les zones du véhicule (toutes caméras confondues)
         zones = self.csv_helper.lire_zones(vehicule, motorisation)
-
         zones_cam = [z for z in zones if str(z.get('numero_camera')) == str(self.camera)]
         
-        if not zones: return 1
+        if not zones_cam: 
+            return 1
         
-        all_ids = [int(z['numero_zone']) for z in zones if str(z.get('numero_zone', '')).isdigit()]
-        max_id = max(all_ids) if all_ids else 0
+        ids_utilises = set(int(z['numero_zone']) for z in zones_cam if str(z.get('numero_zone', '')).isdigit())
         
+        def trouver_plus_petit_dispo(ids):
+            i = 1
+            while i in ids:
+                i += 1
+            return i
+
         if type_actuel in ["None", "none", None, ""]:
-            return max_id + 1
+            return trouver_plus_petit_dispo(ids_utilises)
         
         ids_du_type_actuel = set(
             int(z['numero_zone']) for z in zones_cam 
-            if z.get('type') == type_actuel and str(z.get('numero_zone', '')).isdigit())
-        
+            if z.get('type') == type_actuel and str(z.get('numero_zone', '')).isdigit()
+        )
         ids_des_autres_types = set(
             int(z['numero_zone']) for z in zones_cam 
-            if z.get('type') != type_actuel and str(z.get('numero_zone', '')).isdigit())
+            if z.get('type') != type_actuel and str(z.get('numero_zone', '')).isdigit()
+        )
         
+        # Si une zone existe pour le type "01" mais pas encore pour "10", on propose le même numéro
         zones_orphelines = ids_des_autres_types - ids_du_type_actuel
         if zones_orphelines:
             return min(zones_orphelines)
-        return max_id +1
+        
+        return trouver_plus_petit_dispo(ids_utilises)
             
     def afficher_popup_nom(self):
         fenetre = tk.Toplevel(self.master)
