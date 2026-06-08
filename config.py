@@ -49,20 +49,20 @@ class Config:
         },
         {
         "NUMERO" : 1,
+        "IP" : "10.226.178.53",
+        "USERNAME" : "rasp1",
+        "PASSWORD" : "raspberry1",
+        "CAM" :  [1,2],
+        },
+        {
+        "NUMERO" : 2,
         "IP" : "10.226.178.52",
         "USERNAME" : "ingpi",
         "PASSWORD" : "raspberry1",
-        "CAM" :  [1],
+        "CAM" :  [3],
         }]
     """
         ,
-        {
-        "NUMERO" : 2,
-        "IP" : "10.226.178.53",
-        "USERNAME" : "ingpi",
-        "PASSWORD" : "raspberry1",
-        "CAM" :  [1],
-        },
         {
         "NUMERO" : 3,
         "IP" : "10.226.178.54",
@@ -113,9 +113,7 @@ class Config:
         "TYPE" : False,
         "ACTIVE" : True,
         "NOM" : "Ecran sous moteur D"
-        }]
-    """
-        ,
+        },
         {
         "NUMERO" : 2,
         "TYPE" : False,
@@ -127,7 +125,9 @@ class Config:
         "TYPE" : False,
         "ACTIVE" : True,
         "NOM" : "Deflecteur AVD sous plancher (EH)"
-        },
+        }]
+    """
+        ,
         {
         "NUMERO" : 4,
         "TYPE" : False,
