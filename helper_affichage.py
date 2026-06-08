@@ -75,7 +75,7 @@ class Canvas_interactif(tk.Canvas):
             self.canvas_h = event.height
             self.canvas_w = event.width
             if self.image_path:
-                self.differer_rafraichissement(150)   
+                self.differer_rafraichissement(200)   
 
     def extract_data(self, path):
         nom_fichier = os.path.basename(path)
@@ -387,43 +387,45 @@ class Canvas_interactif(tk.Canvas):
             
             
     def obtenir_prochain_id_zone(self, vehicule, motorisation, type_actuel):
-        """
-        Récupère le prochain ID de zone en recyclant le plus petit ID disponible.
-        Gère l'appariement entre les différents types d'écrans (00, 01, 10...).
-        """
+
         zones = self.csv_helper.lire_zones(vehicule, motorisation)
+        
+        def norm_type(t):
+            return "" if t in ["None", "none", None, ""] else str(t)
+
+        type_actuel_norm = norm_type(type_actuel)
+
         zones_cam = [z for z in zones if str(z.get('numero_camera')) == str(self.camera)]
         
-        if not zones_cam: 
-            return 1
-        
-        ids_utilises = set(int(z['numero_zone']) for z in zones_cam if str(z.get('numero_zone', '')).isdigit())
-        
-        def trouver_plus_petit_dispo(ids):
-            i = 1
-            while i in ids:
-                i += 1
-            return i
+        ids_du_type_actuel = set()
+        ids_des_autres_types = set()
 
-        if type_actuel in ["None", "none", None, ""]:
-            return trouver_plus_petit_dispo(ids_utilises)
-        
-        ids_du_type_actuel = set(
-            int(z['numero_zone']) for z in zones_cam 
-            if z.get('type') == type_actuel and str(z.get('numero_zone', '')).isdigit()
-        )
-        ids_des_autres_types = set(
-            int(z['numero_zone']) for z in zones_cam 
-            if z.get('type') != type_actuel and str(z.get('numero_zone', '')).isdigit()
-        )
-        
-        # Si une zone existe pour le type "01" mais pas encore pour "10", on propose le même numéro
+        for z in zones_cam:
+            z_id_str = str(z.get('numero_zone', ''))
+            if not z_id_str.isdigit():
+                continue
+            z_id = int(z_id_str)
+            
+            if norm_type(z.get('type')) == type_actuel_norm:
+                ids_du_type_actuel.add(z_id)
+            else:
+                ids_des_autres_types.add(z_id)
+
+
         zones_orphelines = ids_des_autres_types - ids_du_type_actuel
         if zones_orphelines:
             return min(zones_orphelines)
+
+
+        ids_utilises_vehicule = set(
+            int(z['numero_zone']) for z in zones if str(z.get('numero_zone', '')).isdigit()
+        )
         
-        return trouver_plus_petit_dispo(ids_utilises)
-            
+        i = 1
+        while i in ids_utilises_vehicule:
+            i += 1
+        return i
+    
     def afficher_popup_nom(self):
         fenetre = tk.Toplevel(self.master)
         fenetre.title("Nom du vissage")
