@@ -166,20 +166,31 @@ class Database:
             if 'conn' in locals() and conn:
                 conn.close()
 
-    def rechercher_vehicule(self, vis_query = "", vehicule_query = "", motorisation_query = ""):
+    def rechercher_vehicule(self, vis_query = "", vehicule_query = "", motorisation_query = "", statut_query = "Tous"):
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
             query = """
-                SELECT vis, vehicule, motorisation, timestamp 
-                FROM inspections 
-                WHERE vis LIKE ? AND vehicule LIKE ? AND motorisation LIKE ?
-                GROUP BY vis 
-                ORDER BY timestamp DESC LIMIT 50
+                SELECT i.vis, i.vehicule, i.motorisation, i.timestamp , MIN(z.score) as min_score
+                FROM inspections i
+                LEFT JOIN zone_results z ON i.id = z.inspection_id
+                WHERE i.vis LIKE ? AND i.vehicule LIKE ? AND i.motorisation LIKE ?
+                GROUP BY I.vis 
             """
-            cursor.execute(query, (f"%{vis_query}%", f"%{vehicule_query}%", f"%{motorisation_query}%"))
+            
+            params = [f"%{vis_query}%", f"%{vehicule_query}%", f"%{motorisation_query}%"]
+            if statut_query == "OK":
+                query += " HAVING min_score >= ?"
+                params.append(Config.SCORE_SEUIL)
+            elif statut_query == "NOK":
+                query += " HAVING min_score < ?"
+                params.append(Config.SCORE_SEUIL)
+            query += "ORDER BY timestamp DESC LIMIT 50"
+
+            cursor.execute(query, params)
             return cursor.fetchall()
+        
         except sqlite3.Error as e:
             print(f"[DB] Erreur lors de la recherche : {e}")
             return []

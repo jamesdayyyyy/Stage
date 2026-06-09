@@ -429,7 +429,7 @@ class Canvas_interactif(tk.Canvas):
     def afficher_popup_nom(self):
         fenetre = tk.Toplevel(self.master)
         fenetre.title("Nom du vissage")
-        fenetre.geometry("300x150")
+        fenetre.geometry("500x150")
         fenetre.grab_set()
 
         tk.Label(fenetre, text="Sélectionnez le nom du vissage :").pack(pady=15)

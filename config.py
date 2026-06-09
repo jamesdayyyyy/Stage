@@ -217,7 +217,8 @@ class Config:
     AUTOMATE_SLOT = 1
 
     PASSWORD = "ing" # pas secret car accéssible dans ce fichier mais enlève risque de modif accidentelle
-
+    DELAI_INACTIVITE = 300000 #5 min
+    
     MAPPING_VEHICULE = {
         "006" : { "VEHICULE" : "P51", "MOTORISATION" : "ICE"},
         "007" : { "VEHICULE" : "P51", "MOTORISATION" : "PHEV"},
