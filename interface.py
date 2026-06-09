@@ -282,7 +282,21 @@ class ApplicationTkinter:
         print(f"[UI] Mise à jour de l'affichage pour le véhicule {vehicule} avec {len(lot_infos)} caméra(s).")
         
         self.header.config(text=f"Véhicule: {vehicule}")
-        self.change_image_by_index(0)
+
+        index_depart = 0  
+        for i, info_cam in enumerate(self.infos_vehicule_actuel):
+            camera_en_defaut = False
+            
+            for res in info_cam.get("resultats_vision", []):
+                if float(res.get("score", 100.0)) < Config.SCORE_SEUIL:
+                    camera_en_defaut = True
+                    break 
+            
+            if camera_en_defaut:
+                index_depart = i
+                break 
+
+        self.change_image_by_index(index_depart)
         self.mettre_a_jour_couleurs_boutons()
 
     def change_image_by_index(self, index):

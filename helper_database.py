@@ -112,24 +112,17 @@ class Database:
             conn = sqlite3.connect(self.db_path)
             conn.execute("PRAGMA foreign_keys = ON;")
             cursor = conn.cursor()
-            cursor.execute("BEGIN TRANSACTION")
             cursor.execute('''
-                           INSERT INTO inspections 
-                           (vis, vehicule, camera) 
-                           VALUES (?, ?, ?)
-                           ''', (
-                           vis, 
-                           str(vehicule), 
-                           int(camera), 
-                           ))
-
-            inspection_id = cursor.lastrowid
-
-            cursor.execute('''
-                           INSERT INTO zone_results (inspection_id, zone_id, score) 
-                           VALUES (?, ?, ?)
-                           ''', (inspection_id, str(zone_id), 100.0))
-
+                UPDATE zone_results 
+                SET score = 100.0 
+                WHERE zone_id = ? 
+                AND inspection_id = (
+                    SELECT id FROM inspections 
+                    WHERE vis = ? AND camera = ? 
+                    ORDER BY id DESC LIMIT 1
+                )
+            ''', (str(zone_id), vis, int(camera)))
+            
             cursor.execute("COMMIT")
             print(f"[DB] Référence de la Zone {zone_id} historisée avec succès.")
 
@@ -178,7 +171,7 @@ class Database:
                 WHERE i.vis LIKE ? AND i.vehicule LIKE ? AND i.motorisation LIKE ?
                 GROUP BY I.vis 
             """
-            
+
             params = [f"%{vis_query}%", f"%{vehicule_query}%", f"%{motorisation_query}%"]
             if statut_query == "OK":
                 query += " HAVING min_score >= ?"

@@ -480,7 +480,14 @@ class Canvas_interactif(tk.Canvas):
                         print(f"[Canvas] Impossible de supprimer {f} : {e}")
 
                 print(f"[Canvas] Zone {z_id} supprimée avec succès (CSV et {len(fichiers_ref)} image(s) effacée(s)).")
-                
+                if self.app and self.app.infos_vehicule_actuel:
+                    for info_cam in self.app.infos_vehicule_actuel:
+                        if str(info_cam["camera_source"]) == str(self.camera):
+                            info_cam["resultats_vision"] = [
+                                res for res in info_cam.get("resultats_vision", []) 
+                                if str(res.get("numero_zone")) != str(z_id)
+                            ]
+                    self.app.mettre_a_jour_couleurs_boutons()
                 self.rafraichir_image()
 
     def differer_rafraichissement(self, delai=150):
