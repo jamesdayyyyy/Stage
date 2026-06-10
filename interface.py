@@ -135,12 +135,15 @@ class ApplicationTkinter:
         self.btn_retour_direct = tk.Button(nav_frame, text="RETOUR AU DIRECT", font=("Arial", 12, "bold"), bg="#e74c3c", fg="white", command=self.retour_au_direct)
         self.btn_next.pack(side="right", padx=20)
         self.btn_prec.pack(side="left", padx=20)
+        self.btn_prec.config(state="disabled")
+        self.btn_next.config(state="disabled")
+
 
         self.root.bind("<Motion>", self.reinitialiser_timer)
 
-    def reinitialiser_timer(self):
+    def reinitialiser_timer(self, event = None):
         if self.timer_inactive is not None:
-            self.root.after_cancel(self.timer_inactivite)
+            self.root.after_cancel(self.timer_inactive)
         if self.mode_admin:
             self.timer_inactive = self.root.after(self.delai_inactive, self.desactiver_auto_admin)
     
@@ -280,7 +283,17 @@ class ApplicationTkinter:
         vehicule = self.infos_vehicule_actuel[0]["vehicule"]
         
         print(f"[UI] Mise à jour de l'affichage pour le véhicule {vehicule} avec {len(lot_infos)} caméra(s).")
+        if self.index_historique == 0:
+            self.btn_prec.config(state="disabled")
+        else:
+            self.btn_prec.config(state="normal")
+        if self.index_historique == len(self.historique_vehicules) - 1:
+            self.btn_next.config(state="disabled")
+        else:
+            self.btn_next.config(state="normal")
         
+                
+
         self.header.config(text=f"Véhicule: {vehicule}")
 
         index_depart = 0  
@@ -353,25 +366,19 @@ class ApplicationTkinter:
     
     def vehicule_suivant(self):
         if self.index_historique < len(self.historique_vehicules) - 1:
-            self.btn_prec.config(state="enabled")
             self.index_historique += 1
             lot_infos = self.historique_vehicules[self.index_historique]
             self.afficher_nouveau_vehicule(lot_infos)
             print(f"[UI] Véhicule suivant affiché (Index Historique: {self.index_historique})")
-            if self.index_historique == len(self.historique_vehicules):
-                self.btn_next.config(state="disabled")
         else:
             print("[UI] Vous êtes déjà sur le dernier véhicule.")
 
     def vehicule_precedent(self):
         if self.index_historique > 0:
-            self.btn_next.config(state="enabled")
             self.index_historique -= 1
             lot_infos = self.historique_vehicules[self.index_historique]
             self.afficher_nouveau_vehicule(lot_infos)
             print(f"[UI] Véhicule précédent affiché (Index Historique: {self.index_historique})")
-            if self.index_historique == 0:
-                self.btn_prec.config(state="disabled")
         else:
             print("[UI] Vous êtes déjà sur le premier véhicule.")
 
@@ -423,7 +430,7 @@ class ApplicationTkinter:
             self.fenetre_recherche.destroy()
             self.fenetre_recherche = None
 
-        # --- Champs de recherche ---
+        # Champs de recherche
         search_frame = tk.Frame(self.fenetre_recherche, bg="#2b2b2b")
         search_frame.pack(fill="x", padx=10, pady=10)
 
@@ -432,20 +439,21 @@ class ApplicationTkinter:
         ent_statut.current(0)
         ent_statut.grid(row=0, column=1, padx=5)
 
-        tk.Label(search_frame, text="VIS :", bg="#2b2b2b", fg="white").grid(row=0, column=0, padx=5)
+        tk.Label(search_frame, text="VIS :", bg="#2b2b2b", fg="white").grid(row=0, column=2, padx=5)
         ent_vis = tk.Entry(search_frame)
-        ent_vis.grid(row=0, column=1, padx=5)
+        ent_vis.grid(row=0, column=3, padx=5)
 
-        tk.Label(search_frame, text="Modèle :", bg="#2b2b2b", fg="white").grid(row=0, column=2, padx=5)
+        tk.Label(search_frame, text="Modèle :", bg="#2b2b2b", fg="white").grid(row=0, column=4, padx=5)
         ent_veh = tk.Entry(search_frame)
-        ent_veh.grid(row=0, column=3, padx=5)
+        ent_veh.grid(row=0, column=5, padx=5)
 
-        tk.Label(search_frame, text="Motorisation :", bg="#2b2b2b", fg="white").grid(row=0, column=4, padx=5)
+        tk.Label(search_frame, text="Motorisation :", bg="#2b2b2b", fg="white").grid(row=0, column=6, padx=5)
         ent_mot = tk.Entry(search_frame)
-        ent_mot.grid(row=0, column=5, padx=5)
+        ent_mot.grid(row=0, column=7, padx=5)
 
         colonnes = ("Statut", "VIS", "Véhicule", "Motorisation", "Date & Heure", "Timestamp")
         tree = ttk.Treeview(self.fenetre_recherche, columns=colonnes, show="headings")
+        tree.tag_configure("DEFAUT", background="#ff4d3d", foreground = "white")
         for col in colonnes:
             tree.heading(col, text = col)
             if col == "Timestamp":
@@ -462,6 +470,7 @@ class ApplicationTkinter:
             for res in resultats:
                 vis, veh, mot, timestamp, min_score = res
                 date_str = datetime.fromtimestamp(int(timestamp)).strftime("%d/%m/%Y %H:%M:%S")
+                tag_ligne = ()
                 if min_score is None:
                     texte_statut = "--"
                 elif min_score >= Config.SCORE_SEUIL:
@@ -471,7 +480,7 @@ class ApplicationTkinter:
                     tag_ligne = ("DEFAUT",)
                 tree.insert("", tk.END, values=(texte_statut, vis, veh, mot, date_str, timestamp), tags= tag_ligne)
                 
-        tk.Button(search_frame, text="Rechercher", bg="#2b2b2b", fg="white", command=lancer_recherche).grid(row=0, column=6, padx=10)
+        tk.Button(search_frame, text="Rechercher", bg="#2b2b2b", fg="white", command=lancer_recherche).grid(row=0, column=8, padx=10)
 
         def on_double_click(event):
             selection = tree.selection()

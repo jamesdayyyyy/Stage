@@ -112,13 +112,13 @@ class Config:
         "NUMERO" : 1,
         "TYPE" : False,
         "ACTIVE" : True,
-        "NOM" : "Ecran sous moteur D"
+        "NOM" : "Ecran sous moteur G"
         },
         {
         "NUMERO" : 2,
         "TYPE" : False,
         "ACTIVE" : True,
-        "NOM" : "Ecran sous moteur G"
+        "NOM" : "Ecran sous moteur D"
         },
         {
         "NUMERO" : 3,
