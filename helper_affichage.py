@@ -18,6 +18,9 @@ import glob
 
 class Canvas_interactif(tk.Canvas):
     def __init__(self, parent, db, csv_helper, app = None, max_size = (800,600), **kwargs):
+        """
+        Initialise un canvas interactif
+        """
         super().__init__(parent, cursor="cross",bg = "black", **kwargs)
         self.db = db
         self.csv_helper = csv_helper
@@ -50,6 +53,15 @@ class Canvas_interactif(tk.Canvas):
         self.bind('<Button-3>', self.on_right_click)
     
     def obtenir_zone_sous_clic(self, orig_x, orig_y):
+        """
+        Vérifie si les coordonnées du clic correspondent à une zone existante
+        Tient compte des coordonées de match et de la zone d'origine
+        Params :
+        - orig_x, orig_y : coordonnées du clic en pixels sur l'image originale (non redimensionnée)
+        Retourne :
+        - Si une zone est trouvée : (zone_id, x0_reel, y0_reel, x1_reel, y1_reel, type_zone)
+        - Si aucune zone n'est trouvée : None
+        """
         zones_existantes = self.csv_helper.lire_zones(self.vehicule, self.motorisation, self.camera)
         scores = self.obtenir_scores_db()
         for z in zones_existantes:
@@ -71,6 +83,14 @@ class Canvas_interactif(tk.Canvas):
         return None
                 
     def on_resize(self,event):
+        """
+        Déclanché lors du redimensionnement du canvas
+        Ajuste la taille de l'image et les zones
+        Params :
+        - event : événement de redimensionnement contenant les nouvelles dimensions du canvas
+        Retourne :
+        - None
+        """
         if event.width > 5 and event.height > 5:
             self.canvas_h = event.height
             self.canvas_w = event.width
@@ -78,6 +98,13 @@ class Canvas_interactif(tk.Canvas):
                 self.differer_rafraichissement(200)   
 
     def extract_data(self, path):
+        """
+        Extrait les données de nomenclature du fichier image
+        Params : 
+        -path : chemin du fichier image
+        Retourne :
+        - True si extraction réussie, False sinon
+        """
         nom_fichier = os.path.basename(path)
         detail = nom_fichier.split("_")
         
@@ -112,6 +139,12 @@ class Canvas_interactif(tk.Canvas):
         return True 
                     
     def charger_image(self,path):
+        """
+        Charge une image depuis le chemin spécifié et l'affiche sur le canvas
+        Params :
+        - path : chemin du fichier image à charger
+        Retourne :
+        - None"""
         if not os.path.exists(path):
             print(f"[Canvas Erreur] Fichier introuvable : {path}")
             return
@@ -124,6 +157,13 @@ class Canvas_interactif(tk.Canvas):
         self.rafraichir_image()
           
     def rafraichir_image(self):
+        """
+        Rafraichit l'image affichée en s'adaptant au zoom et à la taille du canvas
+        Paramas : 
+        - None
+        Retourne :
+        - None
+        """
         if self.image_originale_cv is None : return
         
         h_orig, w_orig = self.image_originale_cv.shape[:2]
@@ -151,6 +191,13 @@ class Canvas_interactif(tk.Canvas):
         self.config(scrollregion=(0, 0, max(self.canvas_w, new_w), max(self.canvas_h, new_h)))
         
     def obtenir_scores_db(self):
+        """
+        Récupère les scores de la base de données pour le VIS et la caméra actuelle
+        Params : 
+        - None
+        Retourne :
+        - Dictionnaire : {zone_id: {"score": score, "match_x": match_x, "match_y": match_y}}
+        """
         scores_dict = {}
         try:
             conn = sqlite3.connect(self.db.db_path)
@@ -169,6 +216,13 @@ class Canvas_interactif(tk.Canvas):
         return scores_dict
             
     def dessiner_zones(self):
+        """
+        Dessine les zones configurées sur l'image en fonction du score
+        Params :
+        -None
+        Retourne :
+        -None
+        """
         self.delete("zone_rect")
         self.delete("zone_text")
         
@@ -215,6 +269,13 @@ class Canvas_interactif(tk.Canvas):
                         self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',))
         
     def on_press(self, event):
+        """
+        Déclanché lors du clic gauche sur le canvas pour créer zone ou ajouter référence
+        Params :
+        - event : événement de clic contenant les coordonnées du clic
+        Retourne :
+        - None
+        """
         if self.app and not self.app.mode_admin:
             messagebox.showwarning("Verrouillé", "Activez le mode modification pour interagir.")
             return
@@ -228,11 +289,25 @@ class Canvas_interactif(tk.Canvas):
         self.end_x = self.end_y = None
 
     def on_drag(self, event):
+        """
+        Déclanché lors du clic gauche et glissé sur le canvas pour afficher le rectangle de sélection
+        Params :
+        - event : événement de clic contenant les coordonnées du clic
+        Retourne :
+        - None
+        """
         if not self.image_path or not self.rect: return
         self.end_x, self.end_y = self.canvasx(event.x), self.canvasy(event.y)
         self.coords(self.rect, self.start_x, self.start_y, self.end_x, self.end_y)
         
     def on_release(self, event):
+        """
+        Déclanché lors de la fin du clic gauche sur le canvas pour créer une zone ou ajouter une référence selon la taille du rectangle
+        Params :
+        - event : événement de clic contenant les coordonnées du clic
+        Retourne :
+        - None
+        """
         if not self.image_path or not self.start_x: return
         
         mouvement_x = abs(self.start_x - self.end_x) if self.end_x else 0
@@ -253,6 +328,13 @@ class Canvas_interactif(tk.Canvas):
             
 
     def _get_target_directory(self, type_zone=None):
+        """
+        Détermine le répertoire cible pour enregistrer les images de référence en fonction du type de zone
+        Params :
+        - type_zone : type de la zone 
+        Retourne :
+        - chemin du répertoire cible
+        """
         base_dir = f"{Config.REF_PATH}/{self.vehicule}_{self.motorisation}"
         
         if type_zone is not None:
@@ -267,6 +349,14 @@ class Canvas_interactif(tk.Canvas):
             return os.path.join(base_dir, self.type_ecran)              
 
     def action_creer_zone(self):
+        """
+        Crée une nouvelle zone en fonction du rectangle tracé, vérifie les chevauchements, 
+        demande le nom du vissage, sauvegarde dans le CSV et la DB, et rafraîchit l'affichage
+        Params :
+        - None
+        Retourne :
+        - None
+        """
         h_orig, w_orig = self.image_originale_cv.shape[:2]
         
         orig_x0 = int((min(self.start_x, self.end_x) - self.offset_x) / self.ratio)
@@ -341,6 +431,13 @@ class Canvas_interactif(tk.Canvas):
         self.charger_image(self.image_path)
             
     def action_ajouter_reference(self):
+        """
+        Ajoute une image de référence pour la zone cliquée, demande confirmation, sauvegarde l'image, met à jour la DB et rafraîchit l'affichage
+        Params :
+        - None
+        Retourne :
+        - None
+        """
         orig_x = int((self.start_x - self.offset_x) / self.ratio)
         orig_y = int((self.start_y - self.offset_y) / self.ratio)
     
@@ -387,6 +484,15 @@ class Canvas_interactif(tk.Canvas):
             
             
     def obtenir_prochain_id_zone(self, vehicule, motorisation, type_actuel):
+        """
+        Détermine le prochain ID de zone à utiliser
+        Params :
+        - vehicule
+        - motorisation
+        - type_actuel : type de la zone actuelle
+        Retourne :
+        - id de zone disponible pour le type actuel
+        """
 
         zones = self.csv_helper.lire_zones(vehicule, motorisation)
         
@@ -427,6 +533,13 @@ class Canvas_interactif(tk.Canvas):
         return i
     
     def afficher_popup_nom(self):
+        """
+        Affiche un popup pour sélectionne le nom du vissage 
+        Params :
+        - None
+        Retourne :
+        - Le nom du vissage sélectionné ou None si annulé
+        """
         fenetre = tk.Toplevel(self.master)
         fenetre.title("Nom du vissage")
         fenetre.geometry("500x150")
@@ -459,6 +572,12 @@ class Canvas_interactif(tk.Canvas):
         return resultat["nom"]
     
     def on_right_click(self, event):
+        """
+        Déclanché lors du clic droit sur le canvas pour supprimer une zone
+        Params :
+        - event : événement de clic contenant les coordonnées du clic
+        Retourne :
+        - None"""
         if self.app and not self.app.mode_admin:
             messagebox.showwarning("Verrouillé", "Activez le mode modification pour supprimer une zone.")
             return
@@ -494,6 +613,10 @@ class Canvas_interactif(tk.Canvas):
         """
         Système Anti-Lag : Annule le précédent rafraîchissement s'il n'est pas encore exécuté, 
         et en programme un nouveau dans 'delai' millisecondes.
+        Params:
+        - délait en millisecondes
+        Retourne:
+        - Nones
         """
         if self.timer_rafraichissement is not None:
             self.after_cancel(self.timer_rafraichissement)

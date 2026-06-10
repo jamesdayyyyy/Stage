@@ -23,6 +23,13 @@ class Database:
         self._initialiser()
         
     def _initialiser(self):
+        """
+        Initialise la base de données au démarrage si elle n'existe pas déjà
+        Params :
+        - None
+        Retourne :
+        - None
+        """
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("PRAGMA foreign_keys = ON;")
             cursor = conn.cursor()
@@ -57,6 +64,13 @@ class Database:
             conn.commit()
             
     def sauvegarder_info(self, info_vehicule):
+        """
+        Ajoute à la base de donnée les résultats d'une ananlyse
+        Params :
+        - info_vehicule (dict)
+        Retourne : 
+        - bool en fonction de si réussi ou non
+        """
         try:
             conn = sqlite3.connect(self.db_path)
             conn.execute("PRAGMA foreign_keys = ON;") 
@@ -106,7 +120,13 @@ class Database:
     def add_reference_to_db(self, vis, vehicule, camera, zone_id):
         """
         Enregistre une prise de référence en utilisant les tables existantes.
-        Crée une "inspection" fantôme.
+        Params:
+        - vis 
+        - vehicule 
+        - camera : id de la caméra (str)
+        - zone_id :  id de la zone (str)
+        Retourne :
+        - None
         """
         try:
             conn = sqlite3.connect(self.db_path)
@@ -136,6 +156,9 @@ class Database:
 
             
     def update_type_materiau(self, vis, camera, type_mat):
+        """
+        Met à jour le type du véhicule dans la base de données
+        """
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -160,6 +183,16 @@ class Database:
                 conn.close()
 
     def rechercher_vehicule(self, vis_query = "", vehicule_query = "", motorisation_query = "", statut_query = "Tous"):
+        """
+        Effectue une recherche sur la base de données afin d'afficher les 50 derniers véhicules correspondant
+        Params:
+        - vis_query : VIS recherché
+        - vehicule_query : vehicule_recherché
+        - motorisation_query : motorisation recherché
+        - statut_query : statut du véhicule (OK/NOK ou tous) recherché
+        Retourne : 
+        - liste des résultats de recherche avec vis, vehicule, motorisation, timestamp, et le score min sur le véhicule
+        """
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
