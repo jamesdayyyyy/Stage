@@ -110,6 +110,8 @@ def analyse_image(queue_in, queue_out, worker_id):
                                 meilleur_score = max_val
                                 meilleur_ref = ref_file
                                 meilleur_loc = max_loc
+                            if meilleur_score >= Config.SCORE_SEUIL:
+                                break
 
                         abs_x = search_x0 + meilleur_loc[0]
                         abs_y = search_y0 + meilleur_loc[1]

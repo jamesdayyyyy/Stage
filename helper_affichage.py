@@ -31,6 +31,12 @@ class Canvas_interactif(tk.Canvas):
         self.image_originale_cv = None
         self.image_tk = None 
         
+        self.zone_en_deplacement = None
+        self.offset_drag_x = 0
+        self.offset_drag_y = 0
+        self.largeur_drag = 0
+        self.hauteur_drag = 0
+        self.type_drag = ""
         
         self.canvas_w = 800
         self.canvas_h = 600
@@ -282,6 +288,24 @@ class Canvas_interactif(tk.Canvas):
         
         if not self.image_path:
              return
+        
+        orig_x = int((self.canvasx(event.x) - self.offset_x) / self.ratio)
+        orig_y = int((self.canvasy(event.y) - self.offset_y) / self.ratio)
+
+        zone_clique = self.obtenir_zone_sous_clic(orig_x, orig_y)
+        if zone_clique:
+            z_id, x0, y0, x1, y1, z_type = zone_clique
+            self.zone_en_deplacement = z_id
+            self.offset_drag_x = orig_x - x0
+            self.offset_drag_y = orig_y - y0
+            self.largeur_drag = x1 - x0
+            self.hauteur_drag = y1 - y0
+            self.type_drag = z_type
+
+            self.last_mouse_x = self.canvasx(event.x)
+            self.last_mouse_y = self.canvasy(event.y)
+            return
+
         self.start_x, self.start_y = self.canvasx(event.x), self.canvasy(event.y)
         if self.rect:
              self.delete(self.rect)
@@ -297,6 +321,19 @@ class Canvas_interactif(tk.Canvas):
         - None
         """
         if not self.image_path or not self.rect: return
+
+        if self.zone_en_deplacement:
+            current_x = self.canvasx(event.x)
+            current_y = self.canvasy(event.y)
+
+            dx = current_x - self.last_mouse_x
+            dy = current_y - self.last_mouse_y
+            self.move(f"zone_{self.zone_en_deplacement}", dx, dy)
+
+            self.last_mouse_x = current_x
+            self.last_mouse_y = current_y
+            return
+
         self.end_x, self.end_y = self.canvasx(event.x), self.canvasy(event.y)
         self.coords(self.rect, self.start_x, self.start_y, self.end_x, self.end_y)
         
@@ -308,7 +345,55 @@ class Canvas_interactif(tk.Canvas):
         Retourne :
         - None
         """
-        if not self.image_path or not self.start_x: return
+        if not self.image_path : return 
+
+        if hasattr(self, "zone_en_deplacement") and self.zone_en_deplacement:
+            orig_x = int((self.canvasx(event.x) - self.offset_x) / self.ratio)
+            orig_y = int((self.canvasy(event.y) - self.offset_y) / self.ratio)
+
+            x0_reel = orig_x - self.offset_drag_x
+            y0_reel = orig_y - self.offset_drag_y
+            x1_reel = x0_reel + self.largeur_drag
+            y1_reel = y0_reel + self.hauteur_drag
+            
+            z_id = self.zone_en_deplacement
+            z_type = self.type_drag
+
+            h_orig, w_orig = self.image_originale_cv.shape[:2]
+            x0_reel, y0_reel = max(0, min(x0_reel, w_orig)), max(0, min(y0_reel, h_orig))
+            x1_reel, y1_reel = max(0, min(x1_reel, w_orig)), max(0, min(y1_reel, h_orig))
+
+            self.zone_en_deplacement = None
+
+            if messagebox.askquestion("Ajouter référence", f"Ajouter cette image comme référence pour la zone {z_id} ?") == "yes":
+                cropped_img = self.image_originale_cv[y0_reel:y1_reel, x0_reel:x1_reel]
+                target_dir = self._get_target_directory(z_type)
+                os.makedirs(target_dir, exist_ok=True)
+                    
+                path_pattern = os.path.join(target_dir, f"zone_{z_id}_%s.jpg")
+                i = 1
+                while os.path.exists(path_pattern % i): 
+                    i += 1
+                        
+                cv2.imwrite(path_pattern % i, cropped_img)
+                
+                # Tracer dans la DB
+                self.db.add_reference_to_db(self.vis, self.vehicule, self.camera, z_id, x0_reel, y0_reel)
+                print(f"[Canvas] Référence ajoutée pour Zone {z_id}")
+
+                if self.app and self.app.infos_vehicule_actuel:
+                    for info_cam in self.app.infos_vehicule_actuel:
+                        if str(info_cam["camera_source"]) == str(self.camera):
+                            for res in info_cam.get("resultats_vision", []):
+                                if str(res["numero_zone"]) == str(z_id):
+                                    res["score"] = 100.0
+                                    res["match_x"] = x0_reel
+                                    res["match_y"] = y0_reel
+                    self.app.mettre_a_jour_couleurs_boutons()
+            self.rafraichir_image()
+            return
+
+        if not self.start_x: return
         
         mouvement_x = abs(self.start_x - self.end_x) if self.end_x else 0
         mouvement_y = abs(self.start_y - self.end_y) if self.end_y else 0

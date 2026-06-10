@@ -117,7 +117,7 @@ class Database:
             if 'conn' in locals() and conn:
                 conn.close()
 
-    def add_reference_to_db(self, vis, vehicule, camera, zone_id):
+    def add_reference_to_db(self, vis, vehicule, camera, zone_id, new_match_x, new_match_y):
         """
         Enregistre une prise de référence en utilisant les tables existantes.
         Params:
@@ -134,14 +134,14 @@ class Database:
             cursor = conn.cursor()
             cursor.execute('''
                 UPDATE zone_results 
-                SET score = 100.0 
+                SET score = 100.0, match_x = ?, match_y = ?
                 WHERE zone_id = ? 
                 AND inspection_id = (
                     SELECT id FROM inspections 
                     WHERE vis = ? AND camera = ? 
                     ORDER BY id DESC LIMIT 1
                 )
-            ''', (str(zone_id), vis, int(camera)))
+            ''', (int(new_match_x), int(new_match_y), str(zone_id), vis, int(camera)))
             
             cursor.execute("COMMIT")
             print(f"[DB] Référence de la Zone {zone_id} historisée avec succès.")
