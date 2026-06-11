@@ -634,7 +634,7 @@ class Canvas_interactif(tk.Canvas):
 
         nom_var = tk.StringVar()
         liste_noms = getattr(Config, "NOM_VIS", ["Vissage"])
-        combo = ttk.Combobox(fenetre, textvariable=nom_var, values=liste_noms, state="readonly")
+        combo = ttk.Combobox(fenetre, textvariable=nom_var, values=liste_noms, state="readonly", width="40")
 
         if liste_noms:
             combo.current(0)
