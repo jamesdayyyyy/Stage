@@ -627,7 +627,7 @@ class Canvas_interactif(tk.Canvas):
         """
         fenetre = tk.Toplevel(self.master)
         fenetre.title("Nom du vissage")
-        fenetre.geometry("500x150")
+        fenetre.geometry("400x150")
         fenetre.grab_set()
 
         tk.Label(fenetre, text="Sélectionnez le nom du vissage :").pack(pady=15)
@@ -638,7 +638,7 @@ class Canvas_interactif(tk.Canvas):
 
         if liste_noms:
             combo.current(0)
-        combo.pack(pady=5)
+        combo.pack(pady=10)
         resultat = {"nom": None}
 
         def valider():
