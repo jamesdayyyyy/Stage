@@ -1,127 +1,137 @@
-# Système de Contrôle Vision CV
+# Industrial Vision Quality Control System (CV-System)
 
-Système de vérification automatique de conformité de pièces et de vissages par vision industrielle sur ligne de production.
+Automated industrial inspection system designed for verifying parts and screw presence on production lines. Built for distributed Raspberry Pi architecture and integration with Siemens S7 PLCs.
 
-## 1. Architecture Matérielle
-*   **Raspberry Pi Maître :** Centralise l'interface graphique (IHM), l'analyse d'image, la base de données et la communication avec l'automate.
-*   **Raspberry Pi Esclaves :** Gèrent la capture physique des images via les modules caméras.
-*   **Automate (PLC) :** Siemens série S7 (1200/1500). Gère l'avancement de la ligne et les signaux de présence véhicule.
-*   **Réseau :** Connexion Ethernet via un switch industriel sur un VLAN dédié.
+---
 
-## 2. Architecture Logicielle
-*   **Traitement d'image :** OpenCV (Template Matching).
-*   **Interface :** Tkinter.
-*   **Communication Inter-Pi :** SSH pour l'exécution de commandes et SFTP pour le transfert de fichiers (librairie Paramiko).
-*   **Communication Automate :** Protocole S7 (librairie Snap7).
-*   **Parallélisme :** Utilisation du module `multiprocessing` pour séparer l'IHM, la capture réseau et l'analyse vision sur différents cœurs du processeur de la Pi Maître.
+## 1. System Architecture
 
-## 3. Arborescence du Projet
+The system operates on a Master/Slave topology to distribute processing and image acquisition.
 
-```text
-/Code/
-├── main.py                  # Point d'entrée de l'application sur la Pi Maître.
-├── config.py                # Paramètres globaux (IP, caméras, automate, seuils).
-├── interface.py             # Gestion de l'interface utilisateur.
-├── reseau.py                # Gestion des flux SSH/SFTP et surveillance automate.
-├── vision.py                # Algorithmes d'analyse d'image.
-├── helper_affichage.py      # Composants graphiques et canvas interactif.
-├── helper_automate.py       # Fonctions de lecture/écriture S7.
-├── helper_csv.py            # Persistance des configurations de zones (CSV).
-├── helper_database.py       # Interface avec la base de données SQLite.
-├── helper_storage.py        # Gestion du stockage en RAM et sur disque.
-├── historique_production.db # Base de données des inspections.
-├── /zones/                  # Définitions des zones par modèle (CSV).
-├── /ref/                    # Images de référence pour le matching.
-└── rasp_distant/            # Scripts à installer sur les Pi Esclaves.
-    ├── config_pi.py         # Configuration locale de l'esclave.
-    ├── rasp_camera_keepalive.py # Démon de maintien d'activité caméra.
-    └── prise_photo.py       # Déclencheur de capture.
+### 1.1 Components
+*   **Master Unit (Raspberry Pi):** Central controller managing the HUI (Tkinter), image processing (OpenCV), SQLite database, and PLC industrial communication (S7 Protocol).
+*   **Slave Units (Raspberry Pi):** Distributed camera nodes responsible for low-latency image capture.
+*   **PLC (Siemens S7-1200/1500):** Production line controller providing vehicle presence signals and receiving inspection results.
+
+### 1.2 Communication Protocol Stack
+| Connection | Protocol | Port | Function |
+| :--- | :--- | :--- | :--- |
+| Master ↔ Slave | SSH / SFTP | 22 | Remote command execution / Image transfer |
+| Master ↔ PLC | S7 Protocol | 102 | DataBlock (DB) read/write |
+| Master ↔ Internal | Socket | 9000 | Keep-alive camera trigger |
+
+---
+
+## 2. Hardware Requirements
+
+### 2.1 Computing Units
+*   **Master:** Raspberry Pi 4 Model B (4GB+ RAM recommended).
+*   **Slaves:** Raspberry Pi 4 or CM4.
+*   **Storage:** Industrial-grade SD cards or SSD for Master (High TBW).
+
+### 2.2 Vision Hardware
+*   **Sensors:** Raspberry Pi Camera Module 3 or HQ Camera.
+*   **Optics:** Fixed focal length lens (C-Mount/M12) calibrated for the specific inspection area.
+*   **Illumination:** 24V Industrial LED bars (strobe or continuous) triggered via PLC or local relay.
+
+---
+
+## 3. Installation & Software Setup
+
+### 3.1 Master Unit Setup
+Ensure Raspberry Pi OS 64-bit is installed.
+```bash
+# Update and install system dependencies
+sudo apt-get update && sudo apt-get install -y libsnap7-dev libatlas-base-dev
+
+# Install Python requirements
+pip install opencv-python-headless numpy paramiko python-snap7 Pillow
 ```
 
-## 4. Installation
+### 3.2 Slave Unit Setup
+Install the `rasp_distant` scripts in the home directory.
+```bash
+# Enable Legacy Camera Support or Libcamera depending on OS version
+sudo raspi-config
+```
+The `rasp_camera_keepalive.py` daemon must be configured to start on boot via `systemd` or `crontab`.
 
-### Sur la Raspberry Pi Maître
-1. **Système :** Raspberry Pi OS (64-bit recommandé).
-2. **Dépendances Python :**
-   ```bash
-   pip install opencv-python numpy paramiko python-snap7 Pillow
-   ```
-3. **Librairie Snap7 :**
-   ```bash
-   sudo apt-get install libsnap7-dev
-   ```
+---
 
-### Sur les Raspberry Pi Esclaves
-1. Copier le répertoire `rasp_distant/` dans `/home/[user]/`.
-2. S'assurer que `picamera2` est installé.
-3. Activer l'interface caméra dans `raspi-config`.
+## 4. Site Deployment & Configuration
 
-## 5. Configuration (`config.py`)
+To deploy the system in a new production area, modify `config.py`.
 
-### Réseau et Esclaves
-Le dictionnaire `RASPBERRY` définit les unités distantes :
-*   `IP` : Adresse statique de la Pi esclave.
-*   `CAM` : Liste des IDs des caméras connectées à cette unité.
+### 4.1 Deployment Workflow
+1.  **Network Mapping:** Assign static IPs to all units in the industrial VLAN.
+2.  **Hardware Definition:** Update the `RASPBERRY` list with the new IPs and associated camera IDs.
+3.  **PLC Integration:** Define `AUTOMATE_IP` and verify the offsets in `AUTOMATE_DB_LECTURE` match the TIA Portal DataBlock structure.
+4.  **Area Calibration:** 
+    *   Boot the system in Admin Mode.
+    *   Capture a reference image.
+    *   Define Regions of Interest (ROI) using the interactive canvas.
+    *   Save references using the "Prendre Réf" command.
 
-### Caméras
-La liste `CAM` définit les propriétés de chaque caméra :
-*   `NUMERO` : Identifiant unique.
-*   `ACTIVE` : État binaire d'utilisation.
-*   `VARIANTE_REQUISE` : Condition de déclenchement liée au code cycle automate.
+### 4.2 Configuration Parameters (`config.py`)
+| Parameter | Description |
+| :--- | :--- |
+| `DATABASE_PATH` | Path to the SQLite history file. |
+| `SCORE_SEUIL` | Acceptance threshold (default 85.0). |
+| `MARGE_RECHERCHE` | Pixel margin for template matching search. |
+| `AUTOMATE_DB` | ID of the DataBlock for vehicle information. |
 
-### Automate
-*   `AUTOMATE_IP` : Adresse IP du PLC.
-*   `AUTOMATE_DB` : Numéro du bloc de données de lecture.
-*   `AUTOMATE_DB_LECTURE` : Offsets (en octets) des variables (VIS, type_vh, etc.).
+---
 
-## 6. Procédures de Paramétrage
+## 5. Industrial PLC Interface
 
-### Création d'une zone d'inspection
-1. Passer en mode Administrateur via l'interface (mot de passe stocké dans `config.py`).
-2. Dessiner la zone sur l'image à l'aide de la souris.
-3. Sélectionner le nom du vissage dans la liste déroulante.
-4. Cliquer sur "Prendre Réf" pour valider.
+The system interacts with two main DataBlocks:
 
-### Analyse d'image
-*   `MARGE_RECHERCHE` : Zone de balayage autour des coordonnées théoriques.
-*   `SCORE_SEUIL` : Valeur minimale (0-100) pour déclarer une zone "OK".
+### 5.1 Input DB (PLC → Master)
+*   **Vehicle Presence:** Bit for triggering the capture.
+*   **VIS / VIN:** String (32 chars) for vehicle identification.
+*   **Cycle Code:** Integers defining the current vehicle model and variant.
 
-## 7. Dépannage
+### 5.2 Output DB (Master → PLC)
+*   **Result OK:** Boolean.
+*   **Result NOK:** Boolean.
+*   **Error System:** Boolean (Watchdog).
+*   **Defect List:** Array of Strings identifying the failed zones.
 
-### Erreurs de communication SSH
-*   **Vérification :** Accessibilité de l'IP esclave via `ping`.
-*   **Action :** Vérifier les droits SSH et la validité des identifiants dans `config.py`. En cas de remplacement d'une Pi, réinitialiser la clé d'hôte : `ssh-keygen -R [IP]`.
+---
 
-### Erreurs Automate
-*   **Vérification :** État du service S7 sur le PLC.
-*   **Action :** S'assurer que l'accès PUT/GET est autorisé et que les DB ne sont pas optimisées dans TIA Portal.
+## 6. Maintenance & Reliability
 
-### Scores de vision bas
-*   **Vérification :** Propreté des optiques et état de l'éclairage.
-*   **Action :** Nettoyer la lentille. Si le défaut persiste, recréer la zone de référence en mode Administrateur.
+### 6.1 Checklists
+*   **Weekly:** 
+    *   Clean camera protective windows with microfiber.
+    *   Verify structural rigidity of mounting brackets.
+*   **Monthly:**
+    *   Monitor `historique_production.db` size.
+    *   Verify industrial lighting consistency.
+    *   Check Master Unit temperature and CPU load.
 
-### Saturation mémoire
-*   **Vérification :** Espace disponible dans `/dev/shm` (RAM).
-*   **Action :** Réduire `CACHE_LIMIT` dans `config.py` ou augmenter la fréquence de nettoyage.
+### 6.2 Troubleshooting (Factual)
+| Error Code | Detection | Remediation |
+| :--- | :--- | :--- |
+| **SSH_FAIL** | Log: "Echec de la connexion" | Check VLAN connectivity / Update SSH Host Keys. |
+| **S7_COMM_ERR** | Log: "Automate hors ligne" | Verify IP, Rack, and Slot settings in `config.py`. |
+| **LOW_SCORE** | Repeated NOK on valid parts | Recalibrate ROI or clean optics. |
+| **STORAGE_FULL** | Red Header in UI | Purge `/HDD_PATH/` archives. |
 
-## 8. Maintenance
+---
 
-### Physique (Hebdomadaire)
-*   Nettoyage des vitres de protection des caméras.
-*   Vérification de la rigidité des supports caméras.
-*   Contrôle de l'éclairage industriel.
+## 7. Data Structure
 
-### Système (Mensuel)
-*   Sauvegarde de `historique_production.db`.
-*   Sauvegarde des répertoires `/zones/` et `/ref/`.
-*   Vérification de l'espace disque sur la Pi Maître.
+### 7.1 Database Schema
+*   `inspections`: Centralizes vehicle metadata (VIS, timestamp, model).
+*   `zone_results`: Detailed scores for every ROI (linked via `inspection_id`).
 
-## 9. Données
+### 7.2 Storage Convention
+Images are archived using the following naming convention:
+`[CAM_ID]_[MODEL]_[ENGINE]_[VARIANT]_[VIS]_[BINARY_RESULTS].jpg`
+Example: `1_P51_ICE_DEF_VF12345_110.jpg`
 
-### Base de données SQLite
-*   Table `inspections` : Entête des contrôles véhicules.
-*   Table `zone_results` : Détail des scores par zone (liée par `inspection_id`).
-
-### Archivage des images
-*   Chemin : `[HDD_PATH]/YYYY/MM/DD/`.
-*   Format du nom : `[Caméra]_[Véhicule]_[Moteur]_[Variante]_[VIS]_[Scores].jpg`.
+---
+**Technical Lead:** James DAY  
+**Version:** 1.2.0 (June 2026)  
+**License:** Industrial Proprietary
