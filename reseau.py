@@ -16,8 +16,9 @@ from snap7.util import get_bool, get_string
 from helper_automate import Automate
 from config import Config
 
+
 class Connexion_SSH:
-    def __init__(self,pi):
+    def __init__(self, pi):
         self.numero = pi["NUMERO"]
         self.ip = pi["IP"]
         self.username = pi["USERNAME"]
@@ -25,55 +26,62 @@ class Connexion_SSH:
         self.cameras = pi["CAM"]
         self.ssh = None
         self.connect()
-        
+
     def connect(self):
         try:
             self.ssh = paramiko.SSHClient()
             self.ssh.load_system_host_keys()
             self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            self.ssh.connect(self.ip,
-                        username = self.username,
-                        password = self.password,
-                        port = 22,
-                        timeout = 5)
+            self.ssh.connect(
+                self.ip,
+                username=self.username,
+                password=self.password,
+                port=22,
+                timeout=5,
+            )
             self.ssh.get_transport().set_keepalive(15)
             print(f"[SSH] Connecté avec succès à la Pi {self.numero} ({self.ip})")
-            self.ssh.exec_command(f"nohup python3 /home/{self.username}/rasp_camera_keepalive.py > /dev/null 2>&1 &")
-            
+            self.ssh.exec_command(
+                f"nohup python3 /home/{self.username}/rasp_camera_keepalive.py > /dev/null 2>&1 &"
+            )
+
         except Exception as e:
             print(f"[Erreur - Pi {self.numero}] Échec de la connexion : {e}")
             self.ssh = None
-    
+
     def get_photo(self):
         if self.ssh is None or not self.ssh.get_transport().is_active():
             print(f"[Réseau] Pi {self.numero} hors ligne. Reconnexion...")
             self.connect()
-        if self.ssh is None :
+        if self.ssh is None:
             return []
         images = []
-        try :
-            stdin, stdout,sterr = self.ssh.exec_command(f"python3 /home/{self.username}/prise_photo.py")
-            erreur = sterr.read().decode('utf-8')
-            out = stdout.read().decode('utf-8')
+        try:
+            stdin, stdout, sterr = self.ssh.exec_command(
+                f"python3 /home/{self.username}/prise_photo.py"
+            )
+            erreur = sterr.read().decode("utf-8")
+            out = stdout.read().decode("utf-8")
             print(out)
             if erreur != "":
                 print(f"[Erreur - Pi {self.numero}] {erreur}")
                 return []
             sftp = self.ssh.open_sftp()
             for camera in self.cameras:
-                print(f"[Réseau - Pi {self.numero}] Téléchargement photo Caméra {camera} en cours...")
+                print(
+                    f"[Réseau - Pi {self.numero}] Téléchargement photo Caméra {camera} en cours..."
+                )
                 path_origine = f"/dev/shm/cam{camera}.jpg"
                 fichier = f"cam{camera}.jpg"
                 path_temp = os.path.join(Config.TEMPORAIRE_PATH, fichier)
-            
+
                 sftp.get(path_origine, path_temp)
                 sftp.remove(path_origine)
-                print(f"[Réseau - Pi {self.numero}] Photo Caméra {camera} rapatriée avec succès dans {path_temp}")
-                images.append({
-                    "path" : path_temp,
-                    "camera_id" : camera
-                    })
-                
+                print(
+                    f"[Réseau - Pi {self.numero}] Photo Caméra {camera} rapatriée avec succès dans {path_temp}"
+                )
+                images.append({"path": path_temp, "camera_id": camera})
+
             sftp.close()
             return images
 
@@ -83,14 +91,17 @@ class Connexion_SSH:
             self.ssh = None
             return []
 
+
 def check_capture(queue_out):
-    connexions_ssh = [Connexion_SSH(rasp) for rasp in Config.RASPBERRY if rasp["NUMERO"] != 0]
+    connexions_ssh = [
+        Connexion_SSH(rasp) for rasp in Config.RASPBERRY if rasp["NUMERO"] != 0
+    ]
     automate = Automate(
-        ip = Config.AUTOMATE_IP,
-        db_numero= Config.AUTOMATE_DB,
-        rack = Config.AUTOMATE_RACK,
-        slot = Config.AUTOMATE_SLOT
-        )
+        ip=Config.AUTOMATE_IP,
+        db_numero=Config.AUTOMATE_DB,
+        rack=Config.AUTOMATE_RACK,
+        slot=Config.AUTOMATE_SLOT,
+    )
     ancien_etat_presence = False
     print("[Systeme] En ecoute ... Attente voiture")
     try:
@@ -104,14 +115,18 @@ def check_capture(queue_out):
                 print("[Système] Véhicule détecté. Préparation à la capture...")
                 timestamp = time.time()
                 vehicule = {
-                    "vis" : data.get("vis", ""),
-                    "vehicule" : data.get("vehicule", ""),
-                    "motorisation" : data.get("motorisation", ""),
-                    "variantes" : data.get("variantes", {})
+                    "vis": data.get("vis", ""),
+                    "vehicule": data.get("vehicule", ""),
+                    "motorisation": data.get("motorisation", ""),
+                    "variantes": data.get("variantes", {}),
                 }
-                with concurrent.futures.ThreadPoolExecutor(max_workers = len(connexions_ssh)) as executor:
-                    futures = [executor.submit(rasp.get_photo) for rasp in connexions_ssh]
-                    
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=len(connexions_ssh)
+                ) as executor:
+                    futures = [
+                        executor.submit(rasp.get_photo) for rasp in connexions_ssh
+                    ]
+
                     for future in concurrent.futures.as_completed(futures):
                         liste_images = future.result()
                         for img_data in liste_images:
@@ -122,22 +137,24 @@ def check_capture(queue_out):
                                 if cam["NUMERO"] == id_camera_actuelle:
                                     cle_requise = cam.get("VARIANTE_REQUISE", "")
                                     if cle_requise:
-                                        variante_active = vehicule["variantes"].get(cle_requise, "")
+                                        variante_active = vehicule["variantes"].get(
+                                            cle_requise, ""
+                                        )
                                         break
-                            
+
                             to_send = {
-                                "vis" : vehicule["vis"],
-                                "vehicule" : vehicule["vehicule"],
-                                "motorisation" : vehicule["motorisation"],
-                                "timestamp" : int(timestamp),
+                                "vis": vehicule["vis"],
+                                "vehicule": vehicule["vehicule"],
+                                "motorisation": vehicule["motorisation"],
+                                "timestamp": int(timestamp),
                                 "image": img_data["path"],
                                 "camera_source": img_data["camera_id"],
-                                "variante_active" : variante_active
-                                }
-                            
+                                "variante_active": variante_active,
+                            }
+
                             queue_out.put(to_send)
             ancien_etat_presence = nouveau_etat_presence
-            
+
     except KeyboardInterrupt:
         print("\n[Système] Arret clavier")
     except Exception as e:

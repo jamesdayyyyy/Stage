@@ -4,14 +4,14 @@ from config import Config
 
 
 class Automate:
-    def __init__(self, ip, db_numero, rack=0,slot=0):
+    def __init__(self, ip, db_numero, rack=0, slot=0):
         self.ip = ip
         self.db_numero = db_numero
         self.rack = rack
         self.slot = slot
         self.client = snap7.client.Client()
-        self.connect() 
-    
+        self.connect()
+
     def connect(self):
         """
         Se connecte à l'automate en utilisant les paramètres de la l'instance
@@ -26,7 +26,7 @@ class Automate:
         except Exception as e:
             print(f"[Erreur - Automate {self.ip}] Échec de la connexion : {e}")
             self.client = None
-    
+
     def lire_data(self):
         """
         Lit les données de l'automate et traduit en informations exploitables
@@ -41,38 +41,39 @@ class Automate:
             print("[Automate] Impossible de se connecter à l'automate.")
             return None
         try:
-            data = self.client.db_read(self.db_numero,0,Config.AUTOMATE_TAILLE_LECTURE)
-            vh_dans_pas = get_bool(data,0,0)
+            data = self.client.db_read(
+                self.db_numero, 0, Config.AUTOMATE_TAILLE_LECTURE
+            )
+            vh_dans_pas = get_bool(data, 0, 0)
 
             variantes_recues = {}
 
             for nom_variable, offset in Config.AUTOMATE_DB_LECTURE.items():
-                valeur = get_string(data,offset).strip()
+                valeur = get_string(data, offset).strip()
                 if nom_variable in Config.MAPPING_PIECE:
                     valeur = Config.MAPPING_PIECE[nom_variable].get(valeur, valeur)
-                variantes_recues[nom_variable] = valeur 
+                variantes_recues[nom_variable] = valeur
 
             code_moteur = variantes_recues.get("code_moteur", "")
             info_traduite = Config.MAPPING_VEHICULE.get(
-                code_moteur, 
-                {"VEHICULE": "Inconnu", "MOTORISATION": code_moteur}
-                )
+                code_moteur, {"VEHICULE": "Inconnu", "MOTORISATION": code_moteur}
+            )
 
             return {
-                "vh_dans_pas" : vh_dans_pas,
-                "vis" : variantes_recues.get("vis", ""),
-                "vehicule" : info_traduite.get("VEHICULE", "Inconnu"),
-                "motorisation" : info_traduite.get("MOTORISATION", "Inconnu"),
-                "variantes" : variantes_recues 
-                }
-        
+                "vh_dans_pas": vh_dans_pas,
+                "vis": variantes_recues.get("vis", ""),
+                "vehicule": info_traduite.get("VEHICULE", "Inconnu"),
+                "motorisation": info_traduite.get("MOTORISATION", "Inconnu"),
+                "variantes": variantes_recues,
+            }
+
         except Exception as e:
             print(f"[Erreur - Automate] {e}")
             self.client.disconnect()
             self.client = None
             return None
-        
-    def envoyer_data(self, vehicule_ok, liste_defauts, erreur_systeme= False):
+
+    def envoyer_data(self, vehicule_ok, liste_defauts, erreur_systeme=False):
         """
         Envoie les résultats de l'inspection à l'automate en formatant les données
         Params :
@@ -81,6 +82,7 @@ class Automate:
         - erreur_systeme : bool indiquant s'il y a eu une erreur système empêchant l'inspection
         Retourne :
         - bool indiquant si l'envoi a réussi ou non"""
+
         if self.client is None or not self.client.get_connected():
             print("[Automate] Automate d'envoie hors ligne. Reconnexion...")
             self.connect()
@@ -105,18 +107,17 @@ class Automate:
                 set_bool(data, OFFSET_BOOLS, 1, vehicule_ok)
                 set_bool(data, OFFSET_BOOLS, 2, not vehicule_ok)
             for i in range(NB_MAX_DEFAUTS):
-                offset_actuel = OFFSET_ARRAY + (i*TAILLE_STRING)
+                offset_actuel = OFFSET_ARRAY + (i * TAILLE_STRING)
                 if i < len(liste_defauts) and not erreur_systeme:
                     set_string(data, offset_actuel, liste_defauts[i][:32])
                 else:
                     set_string(data, offset_actuel, "")
             self.client.db_write(Config.AUTOMATE_DB_ENVOIE, 0, data)
             print("[Automate] Données envoyées à l'automate")
-            return True 
-        
+            return True
+
         except Exception as e:
             print(f"[Erreur - Automate] Échec de l'envoi : {e}")
             self.client.disconnect()
             self.client = None
             return False
-            
