@@ -107,7 +107,7 @@ def check_capture(queue_out):
                     "vis" : data.get("vis", ""),
                     "vehicule" : data.get("vehicule", ""),
                     "motorisation" : data.get("motorisation", ""),
-                    "type_ecran" : data.get("type_ecran", "10"),
+                    "variantes" : data.get("variantes", {})
                 }
                 with concurrent.futures.ThreadPoolExecutor(max_workers = len(connexions_ssh)) as executor:
                     futures = [executor.submit(rasp.get_photo) for rasp in connexions_ssh]
@@ -116,21 +116,25 @@ def check_capture(queue_out):
                         liste_images = future.result()
                         for img_data in liste_images:
                             id_camera_actuelle = img_data["camera_id"]
-                            besoin_type_ecran = False
+                            variante_active = ""
+
                             for cam in Config.CAM:
                                 if cam["NUMERO"] == id_camera_actuelle:
-                                    besoin_type_ecran = cam.get("TYPE", False)
-                                    break
+                                    cle_requise = cam.get("VARIANTE_REQUISE", "")
+                                    if cle_requise:
+                                        variante_active = vehicule["variantes"].get(cle_requise, "")
+                                        break
                             
                             to_send = {
-                                **vehicule,
+                                "vis" : vehicule["vis"],
+                                "vehicule" : vehicule["vehicule"],
+                                "motorisation" : vehicule["motorisation"],
                                 "timestamp" : int(timestamp),
                                 "image": img_data["path"],
-                                "camera_source": img_data["camera_id"]
+                                "camera_source": img_data["camera_id"],
+                                "variante_active" : variante_active
                                 }
                             
-                            if not besoin_type_ecran and "type_ecran" in to_send:
-                                to_send["type_ecran"] = ""
                             queue_out.put(to_send)
             ancien_etat_presence = nouveau_etat_presence
             

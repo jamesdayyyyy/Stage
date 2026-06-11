@@ -73,7 +73,7 @@ class Database:
                            info_vehicule.get('vehicule'),
                            info_vehicule.get('motorisation'),
                            info_vehicule.get('camera_source'),
-                           info_vehicule.get('type_ecran'),
+                           info_vehicule.get('variante_active'),
                            ))
         
             inspection_id = cursor.lastrowid

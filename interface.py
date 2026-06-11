@@ -443,12 +443,17 @@ class ApplicationTkinter:
             nom_fichier = os.path.basename(f)
             detail = nom_fichier.split('_')
             cam_id, veh, mot = detail[0], detail[1], detail[2]
+            if len(detail) == 6:
+                variante_archive = detail[3]
+            else:
+                variante_archive = ""
             chaine = detail[-1].split(".")[0]
             score_factice = 0.0 if "0" in chaine else 100.0
             
             lot_reconstruit.append({
                 "vis": vis, "vehicule": veh, "motorisation": mot,
                 "camera_source": int(cam_id), "timestamp": int(timestamp),
+                "variante_active": variante_archive,
                 "image_hdd_path": f, "image": "", 
                 "resultats_vision": [{"numero_zone": "0", "score": score_factice}] 
             })

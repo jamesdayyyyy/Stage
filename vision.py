@@ -65,13 +65,13 @@ def analyse_image(queue_in, queue_out, worker_id):
                 with open(csv_path, newline = "") as csv_data:
                     reader = list(csv.DictReader(csv_data))
                     
-                besoin_check = any(str(cam["NUMERO"]) == camera_id and cam.get("TYPE") == True for cam in Config.CAM)
+                besoin_check = any(str(cam["NUMERO"]) == camera_id and cam.get("VARIANTE_REQUISE") != "" for cam in Config.CAM)
 
                 
                 for row in reader:
                     if row["numero_camera"] == camera_id :
                         
-                        if besoin_check and row["type"] not in [info_vehicule["type_ecran"], "none", "None", ""]:
+                        if besoin_check and row["type"] not in [info_vehicule["variante_active"], "none", "None", ""]:
                             continue
                     
                         zone_id = row["numero_zone"]
