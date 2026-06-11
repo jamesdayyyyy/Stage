@@ -19,7 +19,7 @@ info_vehicule = {
     "timestamp"
     "image" -> path dans la RAM
     "camera_source"
-    "type_ecran"
+    "variante_active" --> ref de variante
     "resultats_vision" : [{
         "numero_zone" 
         "nom_vissage"
@@ -39,6 +39,8 @@ from dataclasses import dataclass
 @dataclass
 class Config:
     
+    PASSWORD = "ing" # pas secret car accéssible dans ce fichier mais enlève risque de modif accidentelle
+
     RASPBERRY = [
         {
         "NUMERO" : 0,
@@ -110,7 +112,7 @@ class Config:
     
     CAM = [{
         "NUMERO" : 1,
-        "TYPE" : False,
+        "VARIANTE_REQUISE" : "code_ecran",
         "ACTIVE" : True,
         "NOM" : "Ecran sous moteur G"
         },
@@ -212,13 +214,26 @@ class Config:
     
     AUTOMATE_IP = "10.226.178.1"
     AUTOMATE_DB = 102
+    AUTOMATE_TAILLE_LECTURE = 36
     AUTOMATE_DB_ENVOIE = 105
+    AUTOMATE_NB_MAX_DEFAUTS = 15
+    AUTOMATE_OCTETS_DEFAUTS = 34 # String de 32 chars max + 2 octets d'en tête
     AUTOMATE_RACK = 0
     AUTOMATE_SLOT = 1
 
     PASSWORD = "ing" # pas secret car accéssible dans ce fichier mais enlève risque de modif accidentelle
     DELAI_INACTIVITE = 300000 #5 min
     
+    #Ceci permet d'ajouter des code pour pièces
+    #Afin de mettre a jour il faut ajouter les codes cycles reçue dans MAPPING_PIECE
+    AUTOMATE_DB_LECTURE = {
+        "vis": 2,
+        "type_vh": 12,
+        "silhouette": 18,
+        "code_moteur": 24,
+        "code_ecran": 30
+    }
+
     MAPPING_VEHICULE = {
         "006" : { "VEHICULE" : "P51", "MOTORISATION" : "ICE"},
         "007" : { "VEHICULE" : "P51", "MOTORISATION" : "PHEV"},
@@ -236,14 +251,19 @@ class Config:
         "019" : { "VEHICULE" : "P52", "MOTORISATION" : "BEV"},
         "020" : { "VEHICULE" : "P54", "MOTORISATION" : "BEV"},
     }
-    MAPPING_ECRAN = {
-        "01" : {"NOM" : "Sans", "TYPE" : "00"},
-        "02" : {"NOM" : "Ecran tole", "TYPE" : "01"},
-        "03" : {"NOM" : "Deflecteur", "TYPE" : "10"},
-        "04" : {"NOM" : "Deflecteur", "TYPE" : "10"},
-        "05" : {"NOM" : "Ecran tole", "TYPE" : "01"},
-        "06" : {"NOM" : "Deflecteur", "TYPE" : "10"}
+    
+    #format nom_du_code :{
+    #       "code_cycle" : "information_a_extraire"}
 
+    MAPPING_PIECE = {
+        "code_ecran" : {
+            "001" : "00", #Sans
+            "002" : "01", #Ecran tole
+            "003" : "10", #Deflecteur
+            "004" : "10", #Deflecteur
+            "005" : "01", #Ecran tole
+            "006" : "10"  #Deflecteur
+        }
     }
 
     NOM_VIS = ["Deflecteur ARG sous reservoir",

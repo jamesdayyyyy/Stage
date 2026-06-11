@@ -41,29 +41,29 @@ class Automate:
             print("[Automate] Impossible de se connecter à l'automate.")
             return None
         try:
-            data = self.client.db_read(self.db_numero,0,36)
+            data = self.client.db_read(self.db_numero,0,Config.AUTOMATE_TAILLE_LECTURE)
             vh_dans_pas = get_bool(data,0,0)
-            vis = get_string(data,2).strip()
-            type_vh = get_string(data,12).strip() # Non utilisé
-            silhouette = get_string(data, 18).strip() # Non utilisé
-            code_moteur = get_string(data, 24).strip()
-            type_ecran = get_string(data, 30).strip()
 
+            variantes_recues = {}
+
+            for nom_variable, offset in Config.AUTOMATE_DB_LECTURE.items():
+                valeur = get_string(data,offset).strip()
+                if nom_variable in Config.MAPPING_PIECE:
+                    valeur = Config.MAPPING_PIECE[nom_variable].get(valeur, valeur)
+                variantes_recues[nom_variable] = valeur 
+
+            code_moteur = variantes_recues.get("code_moteur", "")
             info_traduite = Config.MAPPING_VEHICULE.get(
                 code_moteur, 
                 {"VEHICULE": "Inconnu", "MOTORISATION": code_moteur}
                 )
-            info_type_ecran = Config.MAPPING_ECRAN.get(
-                type_ecran,
-                {"NOM" : "Deflecteur", "TYPE" : "10"}
-            )
 
             return {
                 "vh_dans_pas" : vh_dans_pas,
-                "vis" : vis,
+                "vis" : variantes_recues.get("vis", ""),
                 "vehicule" : info_traduite.get("VEHICULE", "Inconnu"),
                 "motorisation" : info_traduite.get("MOTORISATION", "Inconnu"),
-                "type_ecran" : info_type_ecran.get("TYPE", "10")
+                "variantes" : variantes_recues 
                 }
         
         except Exception as e:
@@ -91,8 +91,8 @@ class Automate:
             OFFSET_BOOLS = 0
             OFFSET_ARRAY = 2
 
-            NB_MAX_DEFAUTS = 15
-            TAILLE_STRING = 34 # String de 32 chars max + 2 octets d'en tête
+            NB_MAX_DEFAUTS = Config.AUTOMATE_NB_MAX_DEFAUTS
+            TAILLE_STRING = Config.AUTOMATE_OCTETS_DEFAUTS
             taille_totale_db = OFFSET_ARRAY + (NB_MAX_DEFAUTS * TAILLE_STRING)
 
             data = bytearray(taille_totale_db)
