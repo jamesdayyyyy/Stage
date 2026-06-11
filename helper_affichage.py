@@ -246,8 +246,8 @@ class Canvas_interactif(tk.Canvas):
                 if z_id == "0":
                     couleur = "blue"
                     texte = f"Zone {z_id} : TRIAGE"
-                    self.create_rectangle(x0, y0, x1, y1, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",))
-                    self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',))
+                    self.create_rectangle(x0, y0, x1, y1, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",f"carre_{z_id}",))
+                    self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',f"carre_{z_id}",))
                 else:
                     data_score = scores.get(z_id)
                     score = data_score.get("score") if data_score else None
@@ -261,18 +261,18 @@ class Canvas_interactif(tk.Canvas):
                             hauteur_zone = y1 - y0
                             pos_x = int(match_x * self.ratio) + self.offset_x
                             pos_y = int(match_y * self.ratio) + self.offset_y
-                            self.create_rectangle(x0, y0, x1, y1, outline="#555555", dash=(4, 4), width=1, tags=("zone_rect", f"zone_{z_id}"))
-                            self.create_rectangle(pos_x, pos_y, pos_x+largeur_zone, pos_y+hauteur_zone, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",))
-                            self.create_text(pos_x + largeur_zone/2, pos_y + hauteur_zone + 10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',))
+                            self.create_rectangle(x0, y0, x1, y1, outline="#555555", dash=(4, 4), width=1, tags=("zone_rect", f"zone_{z_id}",f"ref_{z_id}",))
+                            self.create_rectangle(pos_x, pos_y, pos_x+largeur_zone, pos_y+hauteur_zone, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",f"carre_{z_id}",))
+                            self.create_text(pos_x + largeur_zone/2, pos_y + hauteur_zone + 10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',f"carre_{z_id}",))
                         else:
-                            self.create_rectangle(x0, y0, x1, y1, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",))
-                            self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',))
+                            self.create_rectangle(x0, y0, x1, y1, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",f"carre_{z_id}",))
+                            self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',f"carre_{z_id}",))
 
                     else:
                         couleur = "orange"
                         texte = f"Zone {z_id} : NA"
-                        self.create_rectangle(x0, y0, x1, y1, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",))
-                        self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',))
+                        self.create_rectangle(x0, y0, x1, y1, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",f"carre_{z_id}",))
+                        self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',f"carre_{z_id}",))
         
     def on_press(self, event):
         """
@@ -320,7 +320,7 @@ class Canvas_interactif(tk.Canvas):
         Retourne :
         - None
         """
-        if not self.image_path or not self.rect: return
+        if not self.image_path: return
 
         if self.zone_en_deplacement:
             current_x = self.canvasx(event.x)
@@ -563,8 +563,8 @@ class Canvas_interactif(tk.Canvas):
                 couleur = "#00ff00"
                 texte = f"Zone {z_id} : 100%"
 
-                self.create_rectangle(x0, y0, x1, y1, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",))
-                self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',))
+                self.create_rectangle(x0, y0, x1, y1, outline=couleur, width=2, tags=("zone_rect",f"zone_{z_id}",f"carre_{z_id}",))
+                self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',f"carre_{z_id}",))
             return
             
             

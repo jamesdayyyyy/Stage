@@ -118,13 +118,13 @@ class Config:
         },
         {
         "NUMERO" : 2,
-        "TYPE" : False,
+        "VARIANTE_REQUISE" : "code_ecran",
         "ACTIVE" : True,
         "NOM" : "Ecran sous moteur D"
         },
         {
         "NUMERO" : 3,
-        "TYPE" : False,
+        "VARIANTE_REQUISE" : "",
         "ACTIVE" : True,
         "NOM" : "Deflecteur AVD sous plancher (EH)"
         }]
