@@ -51,20 +51,20 @@ class Config:
         },
         {
         "NUMERO" : 1,
+        "IP" : "10.226.178.53",
+        "USERNAME" : "rasp1",
+        "PASSWORD" : "raspberry1",
+        "CAM" :  [1,2],
+        },
+        {
+        "NUMERO" : 2,
         "IP" : "10.226.178.52",
         "USERNAME" : "ingpi",
         "PASSWORD" : "raspberry1",
-        "CAM" :  [1],
+        "CAM" :  [3],
         }]
     """
         ,
-        {
-        "NUMERO" : 2,
-        "IP" : "10.226.178.53",
-        "USERNAME" : "ingpi",
-        "PASSWORD" : "raspberry1",
-        "CAM" :  [1],
-        },
         {
         "NUMERO" : 3,
         "IP" : "10.226.178.54",
@@ -114,22 +114,22 @@ class Config:
         "NUMERO" : 1,
         "VARIANTE_REQUISE" : "code_ecran",
         "ACTIVE" : True,
-        "NOM" : "Ecran sous moteur D"
-        }]
-    """
-        ,
+        "NOM" : "Ecran sous moteur G"
+        },
         {
         "NUMERO" : 2,
         "TYPE" : False,
         "ACTIVE" : True,
-        "NOM" : "Ecran sous moteur G"
+        "NOM" : "Ecran sous moteur D"
         },
         {
         "NUMERO" : 3,
         "TYPE" : False,
         "ACTIVE" : True,
         "NOM" : "Deflecteur AVD sous plancher (EH)"
-        },
+        }]
+    """
+        ,
         {
         "NUMERO" : 4,
         "TYPE" : False,
@@ -231,6 +231,8 @@ class Config:
         "code_ecran": 30
     }
 
+    DELAI_INACTIVITE = 300000 #5 min
+    
     MAPPING_VEHICULE = {
         "006" : { "VEHICULE" : "P51", "MOTORISATION" : "ICE"},
         "007" : { "VEHICULE" : "P51", "MOTORISATION" : "PHEV"},

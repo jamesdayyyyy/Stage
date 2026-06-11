@@ -23,6 +23,13 @@ class Database:
         self._initialiser()
         
     def _initialiser(self):
+        """
+        Initialise la base de données au démarrage si elle n'existe pas déjà
+        Params :
+        - None
+        Retourne :
+        - None
+        """
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("PRAGMA foreign_keys = ON;")
             cursor = conn.cursor()
@@ -57,6 +64,13 @@ class Database:
             conn.commit()
             
     def sauvegarder_info(self, info_vehicule):
+        """
+        Ajoute à la base de donnée les résultats d'une ananlyse
+        Params :
+        - info_vehicule (dict)
+        Retourne : 
+        - bool en fonction de si réussi ou non
+        """
         try:
             conn = sqlite3.connect(self.db_path)
             conn.execute("PRAGMA foreign_keys = ON;") 
@@ -103,33 +117,32 @@ class Database:
             if 'conn' in locals() and conn:
                 conn.close()
 
-    def add_reference_to_db(self, vis, vehicule, camera, zone_id):
+    def add_reference_to_db(self, vis, vehicule, camera, zone_id, new_match_x, new_match_y):
         """
         Enregistre une prise de référence en utilisant les tables existantes.
-        Crée une "inspection" fantôme.
+        Params:
+        - vis 
+        - vehicule 
+        - camera : id de la caméra (str)
+        - zone_id :  id de la zone (str)
+        Retourne :
+        - None
         """
         try:
             conn = sqlite3.connect(self.db_path)
             conn.execute("PRAGMA foreign_keys = ON;")
             cursor = conn.cursor()
-            cursor.execute("BEGIN TRANSACTION")
             cursor.execute('''
-                           INSERT INTO inspections 
-                           (vis, vehicule, camera) 
-                           VALUES (?, ?, ?)
-                           ''', (
-                           vis, 
-                           str(vehicule), 
-                           int(camera), 
-                           ))
-
-            inspection_id = cursor.lastrowid
-
-            cursor.execute('''
-                           INSERT INTO zone_results (inspection_id, zone_id, score) 
-                           VALUES (?, ?, ?)
-                           ''', (inspection_id, str(zone_id), 100.0))
-
+                UPDATE zone_results 
+                SET score = 100.0, match_x = ?, match_y = ?
+                WHERE zone_id = ? 
+                AND inspection_id = (
+                    SELECT id FROM inspections 
+                    WHERE vis = ? AND camera = ? 
+                    ORDER BY id DESC LIMIT 1
+                )
+            ''', (int(new_match_x), int(new_match_y), str(zone_id), vis, int(camera)))
+            
             cursor.execute("COMMIT")
             print(f"[DB] Référence de la Zone {zone_id} historisée avec succès.")
 
@@ -143,6 +156,9 @@ class Database:
 
             
     def update_type_materiau(self, vis, camera, type_mat):
+        """
+        Met à jour le type du véhicule dans la base de données
+        """
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -166,20 +182,41 @@ class Database:
             if 'conn' in locals() and conn:
                 conn.close()
 
-    def rechercher_vehicule(self, vis_query = "", vehicule_query = "", motorisation_query = ""):
+    def rechercher_vehicule(self, vis_query = "", vehicule_query = "", motorisation_query = "", statut_query = "Tous"):
+        """
+        Effectue une recherche sur la base de données afin d'afficher les 50 derniers véhicules correspondant
+        Params:
+        - vis_query : VIS recherché
+        - vehicule_query : vehicule_recherché
+        - motorisation_query : motorisation recherché
+        - statut_query : statut du véhicule (OK/NOK ou tous) recherché
+        Retourne : 
+        - liste des résultats de recherche avec vis, vehicule, motorisation, timestamp, et le score min sur le véhicule
+        """
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
             query = """
-                SELECT vis, vehicule, motorisation, timestamp 
-                FROM inspections 
-                WHERE vis LIKE ? AND vehicule LIKE ? AND motorisation LIKE ?
-                GROUP BY vis 
-                ORDER BY timestamp DESC LIMIT 50
+                SELECT i.vis, i.vehicule, i.motorisation, i.timestamp , MIN(z.score) as min_score
+                FROM inspections i
+                LEFT JOIN zone_results z ON i.id = z.inspection_id
+                WHERE i.vis LIKE ? AND i.vehicule LIKE ? AND i.motorisation LIKE ?
+                GROUP BY I.vis 
             """
-            cursor.execute(query, (f"%{vis_query}%", f"%{vehicule_query}%", f"%{motorisation_query}%"))
+
+            params = [f"%{vis_query}%", f"%{vehicule_query}%", f"%{motorisation_query}%"]
+            if statut_query == "OK":
+                query += " HAVING min_score >= ?"
+                params.append(Config.SCORE_SEUIL)
+            elif statut_query == "NOK":
+                query += " HAVING min_score < ?"
+                params.append(Config.SCORE_SEUIL)
+            query += "ORDER BY timestamp DESC LIMIT 50"
+
+            cursor.execute(query, params)
             return cursor.fetchall()
+        
         except sqlite3.Error as e:
             print(f"[DB] Erreur lors de la recherche : {e}")
             return []

@@ -26,6 +26,7 @@ def activer_cam():
         picam2.configure(photo_config)
         picam2.start()
         time.sleep(2)
+        #résolution
         picam2.set_controls({"AfMode" : controls.AfModeEnum.Manual, "LensPosition" : 1/0.3})
         
         photo_info[i] = {

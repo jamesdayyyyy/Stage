@@ -33,7 +33,10 @@ class ApplicationTkinter:
         self.index_historique = -1
         self.mode_recherche = False
         self.fenetre_recherche = None
+
         self.mode_admin = False
+        self.timer_inactive = None
+        self.delai_inactive = Config.DELAI_INACTIVITE
         
         self.disque_critique = False
 
@@ -54,8 +57,8 @@ class ApplicationTkinter:
 
         # BANDEAU ALERTE 
         self.bandeau_alerte = tk.Label(self.root, text="ATTENTION : VOUS CONSULTEZ UN ANCIEN VEHICULE", bg="orange", fg="white", font=("Arial", 14, "bold"))
-
         self.bandeau_disque = tk.Label(self.root, text="", bg="#e74c3c", fg="white", font=("Arial", 14, "bold"))
+
         # MAIN
         main_frame = tk.Frame(self.root)
         main_frame.pack(fill="both", expand=True)
@@ -65,7 +68,7 @@ class ApplicationTkinter:
         menu.pack(side="left", fill="y", padx=5, pady=5)
 
 
-        # ZONE ZOOM
+        # ZONE ZOOM ET RECHERCHE
         zoom_frame = tk.LabelFrame(menu, text="Zoom", bg="#2b2b2b", fg="white", font=("Arial", 10, "bold"))
         zoom_frame.pack(fill="x", padx=8, pady=8)
         tk.Button(zoom_frame, text="+", height=2, command=self.zoom_in).pack(side="left", fill="x", expand=True, padx=5, pady=5)
@@ -127,16 +130,35 @@ class ApplicationTkinter:
         nav_frame = tk.Frame(image_frame, bg="black")
         nav_frame.pack(fill="x", side="bottom", pady=5)
         
-        self.btn_prec = tk.Button(nav_frame, text="◀ Véhicule Précédente", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_precedent)
-        self.btn_next = tk.Button(nav_frame, text="Véhicule Suivante ▶", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_suivant)
+        self.btn_prec = tk.Button(nav_frame, text="◀ Véhicule Précédent", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_precedent)
+        self.btn_next = tk.Button(nav_frame, text="Véhicule Suivant ▶", font=("Arial", 12, "bold"), bg="#444", fg="white", command=self.vehicule_suivant)
         self.btn_retour_direct = tk.Button(nav_frame, text="RETOUR AU DIRECT", font=("Arial", 12, "bold"), bg="#e74c3c", fg="white", command=self.retour_au_direct)
         self.btn_next.pack(side="right", padx=20)
         self.btn_prec.pack(side="left", padx=20)
+        self.btn_prec.config(state="disabled")
+        self.btn_next.config(state="disabled")
+
+
+        self.root.bind("<Motion>", self.reinitialiser_timer)
+
+    def reinitialiser_timer(self, event = None):
+        if self.timer_inactive is not None:
+            self.root.after_cancel(self.timer_inactive)
+        if self.mode_admin:
+            self.timer_inactive = self.root.after(self.delai_inactive, self.desactiver_auto_admin)
+    
+    def desactiver_auto_admin(self):
+        if self.mode_admin:
+            self.mode_admin = False
+            self.btn_admin.config(text="Modifs : OFF", bg="#e74c3c")
+            print("[UI] Mode Modification verrouillé automatiquement : inactivité.")
 
     def toggle_admin(self):
         if self.mode_admin:
             self.mode_admin = False
             self.btn_admin.config(text="Modifs : OFF", bg="#e74c3c")
+            if self.timer_inactivite is not None:
+                self.root.after_cancel(self.timer_inactivite)
             print("[UI] Mode Modification verrouillé.")
         else:
             mdp = simpledialog.askstring("Authentification", "Entrez le mot de passe pour modifier :", show="*")
@@ -144,6 +166,7 @@ class ApplicationTkinter:
                 self.mode_admin = True
                 self.btn_admin.config(text="Modifs : ON", bg="#2ecc71")
                 print("[UI] Mode Modification déverrouillé.")
+                self.reinitialiser_timer() 
             elif mdp is not None:
                 messagebox.showerror("Erreur", "Mot de passe incorrect.")
 
@@ -260,9 +283,33 @@ class ApplicationTkinter:
         vehicule = self.infos_vehicule_actuel[0]["vehicule"]
         
         print(f"[UI] Mise à jour de l'affichage pour le véhicule {vehicule} avec {len(lot_infos)} caméra(s).")
+        if self.index_historique == 0:
+            self.btn_prec.config(state="disabled")
+        else:
+            self.btn_prec.config(state="normal")
+        if self.index_historique == len(self.historique_vehicules) - 1:
+            self.btn_next.config(state="disabled")
+        else:
+            self.btn_next.config(state="normal")
         
+                
+
         self.header.config(text=f"Véhicule: {vehicule}")
-        self.change_image_by_index(0)
+
+        index_depart = 0  
+        for i, info_cam in enumerate(self.infos_vehicule_actuel):
+            camera_en_defaut = False
+            
+            for res in info_cam.get("resultats_vision", []):
+                if float(res.get("score", 100.0)) < Config.SCORE_SEUIL:
+                    camera_en_defaut = True
+                    break 
+            
+            if camera_en_defaut:
+                index_depart = i
+                break 
+
+        self.change_image_by_index(index_depart)
         self.mettre_a_jour_couleurs_boutons()
 
     def change_image_by_index(self, index):
@@ -299,6 +346,7 @@ class ApplicationTkinter:
                 self.canvas.charger_image(chemin_hdd)
             else:
                 print("[UI Erreur] Image introuvable ni en RAM ni sur HDD.")
+        self.mettre_a_jour_couleurs_boutons()
 
     def previous_image(self):
         """Passe à l'image précédente."""
@@ -349,9 +397,9 @@ class ApplicationTkinter:
 
     def mettre_a_jour_couleurs_boutons(self):
         if not self.infos_vehicule_actuel: return 
-
+        cam_active = self.infos_vehicule_actuel[self.current_index]["camera_source"]
         for btn in self.boutons_cameras.values():
-            btn.config(bg="#eeeeee",fg="#222222")
+            btn.config(bg="#eeeeee",fg="#222222", relief="flat", borderwidth=1)
         for info_cam in self.infos_vehicule_actuel:
             cam_id = info_cam["camera_source"]
             camera_defaut = False 
@@ -362,6 +410,8 @@ class ApplicationTkinter:
             if cam_id in self.boutons_cameras:
                 if camera_defaut:
                     self.boutons_cameras[cam_id].config(bg="#ff4d3d", fg="white")
+                if cam_id == cam_active:
+                    self.boutons_cameras[cam_id].config(relief="sunken", borderwidth=3)
 
     def ouvrir_gestionnaire(self):
         if self.fenetre_recherche is not None and tk.Toplevel.winfo_exists(self.fenetre_recherche):
@@ -372,55 +422,71 @@ class ApplicationTkinter:
         
         self.fenetre_recherche = tk.Toplevel(self.root)
         self.fenetre_recherche.title("Gestionnaire de Fichiers / Archives")
-        self.fenetre_recherche.geometry("900x400")
-        self.fenetre_recherche.grab_set() # Empêche de cliquer derrière
+        self.fenetre_recherche.geometry("1200x400")
+        self.fenetre_recherche.grab_set()
         self.fenetre_recherche.config(bg="#2b2b2b")
 
         def on_close_gestionnaire():
             self.fenetre_recherche.destroy()
             self.fenetre_recherche = None
 
-        # --- Champs de recherche ---
+        # Champs de recherche
         search_frame = tk.Frame(self.fenetre_recherche, bg="#2b2b2b")
         search_frame.pack(fill="x", padx=10, pady=10)
 
-        tk.Label(search_frame, text="VIS :", bg="#2b2b2b", fg="white").grid(row=0, column=0, padx=5)
+        tk.Label(search_frame, text="Statut :", bg="#2b2b2b", fg="white").grid(row=0, column=0, padx=5)
+        ent_statut = ttk.Combobox(search_frame, values=["Tous", "OK", "NOK"], state="readonly", width=8)
+        ent_statut.current(0)
+        ent_statut.grid(row=0, column=1, padx=5)
+
+        tk.Label(search_frame, text="VIS :", bg="#2b2b2b", fg="white").grid(row=0, column=2, padx=5)
         ent_vis = tk.Entry(search_frame)
-        ent_vis.grid(row=0, column=1, padx=5)
+        ent_vis.grid(row=0, column=3, padx=5)
 
-        tk.Label(search_frame, text="Modèle :", bg="#2b2b2b", fg="white").grid(row=0, column=2, padx=5)
+        tk.Label(search_frame, text="Modèle :", bg="#2b2b2b", fg="white").grid(row=0, column=4, padx=5)
         ent_veh = tk.Entry(search_frame)
-        ent_veh.grid(row=0, column=3, padx=5)
+        ent_veh.grid(row=0, column=5, padx=5)
 
-        tk.Label(search_frame, text="Moteur :", bg="#2b2b2b", fg="white").grid(row=0, column=4, padx=5)
+        tk.Label(search_frame, text="Motorisation :", bg="#2b2b2b", fg="white").grid(row=0, column=6, padx=5)
         ent_mot = tk.Entry(search_frame)
-        ent_mot.grid(row=0, column=5, padx=5)
+        ent_mot.grid(row=0, column=7, padx=5)
 
-        colonnes = ("VIS", "Véhicule", "Motorisation", "Date & Heure", "Timestamp")
+        colonnes = ("Statut", "VIS", "Véhicule", "Motorisation", "Date & Heure", "Timestamp")
         tree = ttk.Treeview(self.fenetre_recherche, columns=colonnes, show="headings")
+        tree.tag_configure("DEFAUT", background="#ff4d3d", foreground = "white")
         for col in colonnes:
             tree.heading(col, text = col)
             if col == "Timestamp":
                 tree.column(col, width=0, stretch=tk.NO)
+            elif col == "Statut":
+                tree.column(col, width=60, anchor="center")
             else:
                 tree.column(col, width=150, anchor = "center")
         tree.pack(fill="both", expand = True,padx=10, pady=10)
 
         def lancer_recherche():
             for item in tree.get_children(): tree.delete(item)
-            resultats = self.db.rechercher_vehicule(ent_vis.get(), ent_veh.get() ,ent_mot.get())
+            resultats = self.db.rechercher_vehicule(ent_vis.get(), ent_veh.get() ,ent_mot.get(), ent_statut.get())
             for res in resultats:
-                vis, veh, mot, timestamp = res
+                vis, veh, mot, timestamp, min_score = res
                 date_str = datetime.fromtimestamp(int(timestamp)).strftime("%d/%m/%Y %H:%M:%S")
-                tree.insert("", tk.END, values=(vis, veh, mot, date_str, timestamp))
+                tag_ligne = ()
+                if min_score is None:
+                    texte_statut = "--"
+                elif min_score >= Config.SCORE_SEUIL:
+                    texte_statut = "OK"
+                else:
+                    texte_statut = "NOK"
+                    tag_ligne = ("DEFAUT",)
+                tree.insert("", tk.END, values=(texte_statut, vis, veh, mot, date_str, timestamp), tags= tag_ligne)
                 
-        tk.Button(search_frame, text="Rechercher", bg="#2b2b2b", fg="white", command=lancer_recherche).grid(row=0, column=6, padx=10)
+        tk.Button(search_frame, text="Rechercher", bg="#2b2b2b", fg="white", command=lancer_recherche).grid(row=0, column=8, padx=10)
 
         def on_double_click(event):
             selection = tree.selection()
             if not selection: return
             valeurs = tree.item(selection[0], "values")
-            vis, timestamp = valeurs[0], valeurs[4]
+            vis, timestamp = valeurs[1], valeurs[5]
             self.charger_vehicule_archive(vis, timestamp)
             on_close_gestionnaire()
 

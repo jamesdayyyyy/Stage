@@ -18,6 +18,9 @@ import glob
 
 class Canvas_interactif(tk.Canvas):
     def __init__(self, parent, db, csv_helper, app = None, max_size = (800,600), **kwargs):
+        """
+        Initialise un canvas interactif
+        """
         super().__init__(parent, cursor="cross",bg = "black", **kwargs)
         self.db = db
         self.csv_helper = csv_helper
@@ -28,6 +31,12 @@ class Canvas_interactif(tk.Canvas):
         self.image_originale_cv = None
         self.image_tk = None 
         
+        self.zone_en_deplacement = None
+        self.offset_drag_x = 0
+        self.offset_drag_y = 0
+        self.largeur_drag = 0
+        self.hauteur_drag = 0
+        self.type_drag = ""
         
         self.canvas_w = 800
         self.canvas_h = 600
@@ -50,6 +59,15 @@ class Canvas_interactif(tk.Canvas):
         self.bind('<Button-3>', self.on_right_click)
     
     def obtenir_zone_sous_clic(self, orig_x, orig_y):
+        """
+        Vérifie si les coordonnées du clic correspondent à une zone existante
+        Tient compte des coordonées de match et de la zone d'origine
+        Params :
+        - orig_x, orig_y : coordonnées du clic en pixels sur l'image originale (non redimensionnée)
+        Retourne :
+        - Si une zone est trouvée : (zone_id, x0_reel, y0_reel, x1_reel, y1_reel, type_zone)
+        - Si aucune zone n'est trouvée : None
+        """
         zones_existantes = self.csv_helper.lire_zones(self.vehicule, self.motorisation, self.camera)
         scores = self.obtenir_scores_db()
         for z in zones_existantes:
@@ -71,13 +89,28 @@ class Canvas_interactif(tk.Canvas):
         return None
                 
     def on_resize(self,event):
+        """
+        Déclanché lors du redimensionnement du canvas
+        Ajuste la taille de l'image et les zones
+        Params :
+        - event : événement de redimensionnement contenant les nouvelles dimensions du canvas
+        Retourne :
+        - None
+        """
         if event.width > 5 and event.height > 5:
             self.canvas_h = event.height
             self.canvas_w = event.width
             if self.image_path:
-                self.differer_rafraichissement(150)   
+                self.differer_rafraichissement(200)   
 
     def extract_data(self, path):
+        """
+        Extrait les données de nomenclature du fichier image
+        Params : 
+        -path : chemin du fichier image
+        Retourne :
+        - True si extraction réussie, False sinon
+        """
         nom_fichier = os.path.basename(path)
         detail = nom_fichier.split("_")
         
@@ -112,6 +145,12 @@ class Canvas_interactif(tk.Canvas):
         return True 
                     
     def charger_image(self,path):
+        """
+        Charge une image depuis le chemin spécifié et l'affiche sur le canvas
+        Params :
+        - path : chemin du fichier image à charger
+        Retourne :
+        - None"""
         if not os.path.exists(path):
             print(f"[Canvas Erreur] Fichier introuvable : {path}")
             return
@@ -124,6 +163,13 @@ class Canvas_interactif(tk.Canvas):
         self.rafraichir_image()
           
     def rafraichir_image(self):
+        """
+        Rafraichit l'image affichée en s'adaptant au zoom et à la taille du canvas
+        Paramas : 
+        - None
+        Retourne :
+        - None
+        """
         if self.image_originale_cv is None : return
         
         h_orig, w_orig = self.image_originale_cv.shape[:2]
@@ -151,6 +197,13 @@ class Canvas_interactif(tk.Canvas):
         self.config(scrollregion=(0, 0, max(self.canvas_w, new_w), max(self.canvas_h, new_h)))
         
     def obtenir_scores_db(self):
+        """
+        Récupère les scores de la base de données pour le VIS et la caméra actuelle
+        Params : 
+        - None
+        Retourne :
+        - Dictionnaire : {zone_id: {"score": score, "match_x": match_x, "match_y": match_y}}
+        """
         scores_dict = {}
         try:
             conn = sqlite3.connect(self.db.db_path)
@@ -169,6 +222,13 @@ class Canvas_interactif(tk.Canvas):
         return scores_dict
             
     def dessiner_zones(self):
+        """
+        Dessine les zones configurées sur l'image en fonction du score
+        Params :
+        -None
+        Retourne :
+        -None
+        """
         self.delete("zone_rect")
         self.delete("zone_text")
         
@@ -215,12 +275,37 @@ class Canvas_interactif(tk.Canvas):
                         self.create_text((x0+x1)/2, y1+10, text=texte, fill=couleur, tags=("zone_text",f'zone_{z_id}',))
         
     def on_press(self, event):
+        """
+        Déclanché lors du clic gauche sur le canvas pour créer zone ou ajouter référence
+        Params :
+        - event : événement de clic contenant les coordonnées du clic
+        Retourne :
+        - None
+        """
         if self.app and not self.app.mode_admin:
             messagebox.showwarning("Verrouillé", "Activez le mode modification pour interagir.")
             return
         
         if not self.image_path:
              return
+        
+        orig_x = int((self.canvasx(event.x) - self.offset_x) / self.ratio)
+        orig_y = int((self.canvasy(event.y) - self.offset_y) / self.ratio)
+
+        zone_clique = self.obtenir_zone_sous_clic(orig_x, orig_y)
+        if zone_clique:
+            z_id, x0, y0, x1, y1, z_type = zone_clique
+            self.zone_en_deplacement = z_id
+            self.offset_drag_x = orig_x - x0
+            self.offset_drag_y = orig_y - y0
+            self.largeur_drag = x1 - x0
+            self.hauteur_drag = y1 - y0
+            self.type_drag = z_type
+
+            self.last_mouse_x = self.canvasx(event.x)
+            self.last_mouse_y = self.canvasy(event.y)
+            return
+
         self.start_x, self.start_y = self.canvasx(event.x), self.canvasy(event.y)
         if self.rect:
              self.delete(self.rect)
@@ -228,12 +313,87 @@ class Canvas_interactif(tk.Canvas):
         self.end_x = self.end_y = None
 
     def on_drag(self, event):
+        """
+        Déclanché lors du clic gauche et glissé sur le canvas pour afficher le rectangle de sélection
+        Params :
+        - event : événement de clic contenant les coordonnées du clic
+        Retourne :
+        - None
+        """
         if not self.image_path or not self.rect: return
+
+        if self.zone_en_deplacement:
+            current_x = self.canvasx(event.x)
+            current_y = self.canvasy(event.y)
+
+            dx = current_x - self.last_mouse_x
+            dy = current_y - self.last_mouse_y
+            self.move(f"zone_{self.zone_en_deplacement}", dx, dy)
+
+            self.last_mouse_x = current_x
+            self.last_mouse_y = current_y
+            return
+
         self.end_x, self.end_y = self.canvasx(event.x), self.canvasy(event.y)
         self.coords(self.rect, self.start_x, self.start_y, self.end_x, self.end_y)
         
     def on_release(self, event):
-        if not self.image_path or not self.start_x: return
+        """
+        Déclanché lors de la fin du clic gauche sur le canvas pour créer une zone ou ajouter une référence selon la taille du rectangle
+        Params :
+        - event : événement de clic contenant les coordonnées du clic
+        Retourne :
+        - None
+        """
+        if not self.image_path : return 
+
+        if hasattr(self, "zone_en_deplacement") and self.zone_en_deplacement:
+            orig_x = int((self.canvasx(event.x) - self.offset_x) / self.ratio)
+            orig_y = int((self.canvasy(event.y) - self.offset_y) / self.ratio)
+
+            x0_reel = orig_x - self.offset_drag_x
+            y0_reel = orig_y - self.offset_drag_y
+            x1_reel = x0_reel + self.largeur_drag
+            y1_reel = y0_reel + self.hauteur_drag
+            
+            z_id = self.zone_en_deplacement
+            z_type = self.type_drag
+
+            h_orig, w_orig = self.image_originale_cv.shape[:2]
+            x0_reel, y0_reel = max(0, min(x0_reel, w_orig)), max(0, min(y0_reel, h_orig))
+            x1_reel, y1_reel = max(0, min(x1_reel, w_orig)), max(0, min(y1_reel, h_orig))
+
+            self.zone_en_deplacement = None
+
+            if messagebox.askquestion("Ajouter référence", f"Ajouter cette image comme référence pour la zone {z_id} ?") == "yes":
+                cropped_img = self.image_originale_cv[y0_reel:y1_reel, x0_reel:x1_reel]
+                target_dir = self._get_target_directory(z_type)
+                os.makedirs(target_dir, exist_ok=True)
+                    
+                path_pattern = os.path.join(target_dir, f"zone_{z_id}_%s.jpg")
+                i = 1
+                while os.path.exists(path_pattern % i): 
+                    i += 1
+                        
+                cv2.imwrite(path_pattern % i, cropped_img)
+                
+                # Tracer dans la DB
+                self.db.add_reference_to_db(self.vis, self.vehicule, self.camera, z_id, x0_reel, y0_reel)
+                print(f"[Canvas] Référence ajoutée pour Zone {z_id}")
+
+                if self.app and self.app.infos_vehicule_actuel:
+                    for info_cam in self.app.infos_vehicule_actuel:
+                        if str(info_cam["camera_source"]) == str(self.camera):
+                            for res in info_cam.get("resultats_vision", []):
+                                if str(res["numero_zone"]) == str(z_id):
+                                    res["score"] = 100.0
+                                    res["match_x"] = x0_reel
+                                    res["match_y"] = y0_reel
+                    self.app.mettre_a_jour_couleurs_boutons()
+            self.rafraichir_image()
+            return
+
+        if not self.start_x: return
         
         mouvement_x = abs(self.start_x - self.end_x) if self.end_x else 0
         mouvement_y = abs(self.start_y - self.end_y) if self.end_y else 0
@@ -253,6 +413,13 @@ class Canvas_interactif(tk.Canvas):
             
 
     def _get_target_directory(self, type_zone=None):
+        """
+        Détermine le répertoire cible pour enregistrer les images de référence en fonction du type de zone
+        Params :
+        - type_zone : type de la zone 
+        Retourne :
+        - chemin du répertoire cible
+        """
         base_dir = f"{Config.REF_PATH}/{self.vehicule}_{self.motorisation}"
         
         if type_zone is not None:
@@ -267,6 +434,14 @@ class Canvas_interactif(tk.Canvas):
             return os.path.join(base_dir, self.variante_active)              
 
     def action_creer_zone(self):
+        """
+        Crée une nouvelle zone en fonction du rectangle tracé, vérifie les chevauchements, 
+        demande le nom du vissage, sauvegarde dans le CSV et la DB, et rafraîchit l'affichage
+        Params :
+        - None
+        Retourne :
+        - None
+        """
         h_orig, w_orig = self.image_originale_cv.shape[:2]
         
         orig_x0 = int((min(self.start_x, self.end_x) - self.offset_x) / self.ratio)
@@ -341,6 +516,13 @@ class Canvas_interactif(tk.Canvas):
         self.charger_image(self.image_path)
             
     def action_ajouter_reference(self):
+        """
+        Ajoute une image de référence pour la zone cliquée, demande confirmation, sauvegarde l'image, met à jour la DB et rafraîchit l'affichage
+        Params :
+        - None
+        Retourne :
+        - None
+        """
         orig_x = int((self.start_x - self.offset_x) / self.ratio)
         orig_y = int((self.start_y - self.offset_y) / self.ratio)
     
@@ -388,46 +570,64 @@ class Canvas_interactif(tk.Canvas):
             
     def obtenir_prochain_id_zone(self, vehicule, motorisation, type_actuel):
         """
-        Récupère le prochain ID de zone en recyclant le plus petit ID disponible.
-        Gère l'appariement entre les différents types d'écrans (00, 01, 10...).
+        Détermine le prochain ID de zone à utiliser
+        Params :
+        - vehicule
+        - motorisation
+        - type_actuel : type de la zone actuelle
+        Retourne :
+        - id de zone disponible pour le type actuel
         """
+
         zones = self.csv_helper.lire_zones(vehicule, motorisation)
+        
+        def norm_type(t):
+            return "" if t in ["None", "none", None, ""] else str(t)
+
+        type_actuel_norm = norm_type(type_actuel)
+
         zones_cam = [z for z in zones if str(z.get('numero_camera')) == str(self.camera)]
         
-        if not zones_cam: 
-            return 1
-        
-        ids_utilises = set(int(z['numero_zone']) for z in zones_cam if str(z.get('numero_zone', '')).isdigit())
-        
-        def trouver_plus_petit_dispo(ids):
-            i = 1
-            while i in ids:
-                i += 1
-            return i
+        ids_du_type_actuel = set()
+        ids_des_autres_types = set()
 
-        if type_actuel in ["None", "none", None, ""]:
-            return trouver_plus_petit_dispo(ids_utilises)
-        
-        ids_du_type_actuel = set(
-            int(z['numero_zone']) for z in zones_cam 
-            if z.get('type') == type_actuel and str(z.get('numero_zone', '')).isdigit()
-        )
-        ids_des_autres_types = set(
-            int(z['numero_zone']) for z in zones_cam 
-            if z.get('type') != type_actuel and str(z.get('numero_zone', '')).isdigit()
-        )
-        
-        # Si une zone existe pour le type "01" mais pas encore pour "10", on propose le même numéro
+        for z in zones_cam:
+            z_id_str = str(z.get('numero_zone', ''))
+            if not z_id_str.isdigit():
+                continue
+            z_id = int(z_id_str)
+            
+            if norm_type(z.get('type')) == type_actuel_norm:
+                ids_du_type_actuel.add(z_id)
+            else:
+                ids_des_autres_types.add(z_id)
+
+
         zones_orphelines = ids_des_autres_types - ids_du_type_actuel
         if zones_orphelines:
             return min(zones_orphelines)
+
+
+        ids_utilises_vehicule = set(
+            int(z['numero_zone']) for z in zones if str(z.get('numero_zone', '')).isdigit()
+        )
         
-        return trouver_plus_petit_dispo(ids_utilises)
-            
+        i = 1
+        while i in ids_utilises_vehicule:
+            i += 1
+        return i
+    
     def afficher_popup_nom(self):
+        """
+        Affiche un popup pour sélectionne le nom du vissage 
+        Params :
+        - None
+        Retourne :
+        - Le nom du vissage sélectionné ou None si annulé
+        """
         fenetre = tk.Toplevel(self.master)
         fenetre.title("Nom du vissage")
-        fenetre.geometry("300x150")
+        fenetre.geometry("400x150")
         fenetre.grab_set()
 
         tk.Label(fenetre, text="Sélectionnez le nom du vissage :").pack(pady=15)
@@ -438,7 +638,7 @@ class Canvas_interactif(tk.Canvas):
 
         if liste_noms:
             combo.current(0)
-        combo.pack(pady=5)
+        combo.pack(pady=10)
         resultat = {"nom": None}
 
         def valider():
@@ -457,6 +657,12 @@ class Canvas_interactif(tk.Canvas):
         return resultat["nom"]
     
     def on_right_click(self, event):
+        """
+        Déclanché lors du clic droit sur le canvas pour supprimer une zone
+        Params :
+        - event : événement de clic contenant les coordonnées du clic
+        Retourne :
+        - None"""
         if self.app and not self.app.mode_admin:
             messagebox.showwarning("Verrouillé", "Activez le mode modification pour supprimer une zone.")
             return
@@ -478,13 +684,24 @@ class Canvas_interactif(tk.Canvas):
                         print(f"[Canvas] Impossible de supprimer {f} : {e}")
 
                 print(f"[Canvas] Zone {z_id} supprimée avec succès (CSV et {len(fichiers_ref)} image(s) effacée(s)).")
-                
+                if self.app and self.app.infos_vehicule_actuel:
+                    for info_cam in self.app.infos_vehicule_actuel:
+                        if str(info_cam["camera_source"]) == str(self.camera):
+                            info_cam["resultats_vision"] = [
+                                res for res in info_cam.get("resultats_vision", []) 
+                                if str(res.get("numero_zone")) != str(z_id)
+                            ]
+                    self.app.mettre_a_jour_couleurs_boutons()
                 self.rafraichir_image()
 
     def differer_rafraichissement(self, delai=150):
         """
         Système Anti-Lag : Annule le précédent rafraîchissement s'il n'est pas encore exécuté, 
         et en programme un nouveau dans 'delai' millisecondes.
+        Params:
+        - délait en millisecondes
+        Retourne:
+        - Nones
         """
         if self.timer_rafraichissement is not None:
             self.after_cancel(self.timer_rafraichissement)

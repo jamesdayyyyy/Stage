@@ -13,6 +13,13 @@ class Automate:
         self.connect() 
     
     def connect(self):
+        """
+        Se connecte à l'automate en utilisant les paramètres de la l'instance
+        Params :
+        - None
+        Retourne :
+        - None
+        """
         try:
             self.client.connect(self.ip, self.rack, self.slot)
             print(f"[Automate] Connecté à l'automate")
@@ -21,6 +28,12 @@ class Automate:
             self.client = None
     
     def lire_data(self):
+        """
+        Lit les données de l'automate et traduit en informations exploitables
+        Params :
+        - None
+        Retourne :
+        - Dictionnaire contenant les informations lues ou None en cas d'erreur"""
         if self.client is None or not self.client.get_connected():
             print("[Automate] Automate hors ligne. Reconnexion...")
             self.connect()
@@ -60,6 +73,14 @@ class Automate:
             return None
         
     def envoyer_data(self, vehicule_ok, liste_defauts, erreur_systeme= False):
+        """
+        Envoie les résultats de l'inspection à l'automate en formatant les données
+        Params :
+        - vehicule_ok : bool indiquant si le véhicule est conforme ou non
+        - liste_defauts : liste de chaînes de caractères décrivant les défauts détectés
+        - erreur_systeme : bool indiquant s'il y a eu une erreur système empêchant l'inspection
+        Retourne :
+        - bool indiquant si l'envoi a réussi ou non"""
         if self.client is None or not self.client.get_connected():
             print("[Automate] Automate d'envoie hors ligne. Reconnexion...")
             self.connect()

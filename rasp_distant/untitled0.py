@@ -1,69 +1,43 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import cv2
-import os
-from tkinter import filedialog
-import tkinter as tk
+import numpy as np
 
-def traiter_image_selectionnee_gris_et_flou():
-    # 1. Initialiser une fenêtre Tkinter masquée pour l'explorateur de fichiers
-    root = tk.Tk()
-    root.withdraw() 
-    
-    # 2. Ouvrir la boîte de dialogue pour sélectionner l'image
-    print("[Système] En attente de sélection d'une image...")
-    chemin_image = filedialog.askopenfilename(
-        title="Sélectionner l'image à traiter (Gris + Flou Gaussien)",
-        filetypes=[("Images jointes", "*.jpg *.jpeg *.png *.bmp *.tiff"), ("Tous les fichiers", "*.*")]
-    )
-    
-    if not chemin_image:
-        print("[Annulation] Aucune image n'a été sélectionnée.")
+def tester_filtre_sobel(chemin_image):
+    # 1. Charger l'image
+    image = cv2.imread(chemin_image)
+    if image is None:
+        print(f"Erreur : Impossible de charger l'image au chemin '{chemin_image}'")
         return
 
-    print(f"[Analyse] Image sélectionnée : {os.path.basename(chemin_image)}")
+    # 2. Convertir en niveaux de gris
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    try:
-        # 3. Charger l'image d'origine en couleur
-        image_origine = cv2.imread(chemin_image)
-        
-        if image_origine is None:
-            print("[Erreur] Impossible de lire le fichier.")
-            return
+    # 3. Appliquer un très léger flou gaussien pour lisser la texture du métal
+    blurred = cv2.GaussianBlur(gray, (21, 21), 0)
 
-        # 4. ÉTAPE 1 : Conversion en niveaux de gris
-        # Formule mathématique appliquée par OpenCV : Y = 0.299*R + 0.587*G + 0.114*B
-        image_gris = cv2.cvtColor(image_origine, cv2.COLOR_BGR2GRAY)
-        print("[Succès] Conversion en niveaux de gris effectuée (Passage à 1 canal).")
+    # 4. Appliquer le filtre de Sobel (Calcul des pentes)
+    # On calcule les reliefs sur l'axe X (vertical) et l'axe Y (horizontal)
+    # On utilise CV_64F (float) temporairement pour ne pas "couper" les valeurs mathématiques négatives
+    sobel_x = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=3)
+    sobel_y = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=3)
 
-        # 5. ÉTAPE 2 : Application du Flou Gaussien sur l'image en niveaux de gris
-        taille_noyau = (9, 9)
-        image_floue = cv2.GaussianBlur(image_gris, taille_noyau, 0)
-        print(f"[Succès] Filtrage Gaussien appliqué sur les niveaux de gris (Noyau {taille_noyau[0]}x{taille_noyau[1]}).")
+    # 5. Combiner les deux axes pour obtenir le relief total (La "Magnitude")
+    magnitude = cv2.magnitude(sobel_x, sobel_y)
 
-        # 6. Affichage des 3 étapes à l'écran pour ton rapport
-        cv2.imshow("1. Image d'origine (Couleur / Brute)", image_origine)
-        cv2.imshow("2. Image en Niveaux de Gris (1 Canal)", image_gris)
-        cv2.imshow("3. Image finale (Gris + Flou Gaussien)", image_floue)
-        
-        print("[IHM] Appuie sur n'importe quelle touche sur l'une des images pour fermer.")
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+    # 6. Convertir le résultat mathématique en image classique affichable (pixels de 0 à 255)
+    sobel_final = cv2.convertScaleAbs(magnitude)
 
-        # 7. Sauvegarde du résultat final
-        dossier, nom_fichier = os.path.split(chemin_image)
-        nouveau_nom = "gris_flou_" + nom_fichier
-        chemin_sauvegarde = os.path.join(dossier, nouveau_nom)
-        nouveau_nom = "gris" + nom_fichier
-        chemin_sauvegarde_2 = os.path.join(dossier, nouveau_nom)
-        
-        cv2.imwrite(chemin_sauvegarde_2 , image_gris)
-        cv2.imwrite(chemin_sauvegarde, image_floue)
-        print(f"[Stockage] Image finale sauvegardée sous : {chemin_sauvegarde}")
+    # --- Optionnel : Améliorer le contraste visuel ---
+    # Parfois Sobel est un peu sombre, on peut forcer le contraste pour que le relief "pète" à l'écran
+    #sobel_final = cv2.equalizeHist(sobel_final)
 
-    except Exception as e:
-        print(f"[🚨 Erreur Traitement] {e}")
+    # 7. Affichage des résultats
+    cv2.imshow("1 - Image Originale", image)
+    cv2.imshow("2 - Filtre Sobel (Relief)", blurred)
 
-if __name__ == "__main__":
-    traiter_image_selectionnee_gris_et_flou()
+    print("Fenêtres ouvertes ! Appuie sur n'importe quelle touche pour quitter.")
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+# --- Lancement du test ---
+chemin_de_test = "/Users/james/Downloads/zone_1_1.jpg"  # Mets le nom exact de ton image ici
+tester_filtre_sobel(chemin_de_test)
