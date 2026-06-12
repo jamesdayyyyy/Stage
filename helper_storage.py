@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed May 20 09:54:35 2026
+Module de gestion du stockage des images (RAM et HDD).
 
-@author: James DAY
+Ce module gère le cycle de vie des images capturées :
+1. Renommage selon une convention stricte (VIS, scores, caméra).
+2. Mise en cache en RAM (/dev/shm) avec nettoyage automatique.
+3. Archivage permanent sur disque dur (HDD) avec une structure par date.
+
+Auteur: James DAY
+Date de création: 20 mai 2026
 """
 
 import os
@@ -14,15 +20,34 @@ from config import Config
 
 
 class GestionnaireRAM:
+    """
+    Gestionnaire de cache pour les images stockées en RAM.
+
+    Permet de limiter l'occupation mémoire en supprimant les fichiers les plus
+    anciens une fois la capacité maximale atteinte.
+    """
+
     def __init__(
         self, nb_voitures_en_cache=Config.CACHE_LIMIT, cams_par_voiture=len(Config.CAM)
     ):
+        """
+        Initialise le cache avec une capacité calculée.
+
+        Args:
+            nb_voitures_en_cache (int): Nombre de véhicules complets à garder.
+            cams_par_voiture (int): Nombre de caméras par véhicule.
+        """
         # 2 voitures * 14 caméras = 28 images maximum gardées en RAM
         self.capacite_max = nb_voitures_en_cache * cams_par_voiture
         self.fichiers_en_ram = deque()
 
     def ajouter_et_nettoyer(self, chemin_ram):
-        """Ajoute la nouvelle image au cache et supprime la plus vieille si plein."""
+        """
+        Ajoute une image au cache et supprime le fichier le plus ancien si plein.
+
+        Args:
+            chemin_ram (str): Chemin du nouveau fichier image en RAM.
+        """
         self.fichiers_en_ram.append(chemin_ram)
 
         if len(self.fichiers_en_ram) > self.capacite_max:
@@ -41,6 +66,17 @@ class GestionnaireRAM:
 
 
 def generer_nom(info_vehicule):
+    """
+    Génère un nom de fichier standardisé basé sur les données de l'inspection.
+
+    Format : {camera}_{vehicule}_{motorisation}_{variante}_{vis}_{chaine_scores}.jpg
+
+    Args:
+        info_vehicule (dict): Données complètes du véhicule et de l'analyse.
+
+    Returns:
+        str: Nom de fichier généré.
+    """
     camera = info_vehicule.get("camera_source", "X")
     vehicule = info_vehicule.get("vehicule", "Inconnu")
     motorisation = info_vehicule.get("motorisation", "Inconnu")
@@ -67,6 +103,17 @@ def generer_nom(info_vehicule):
 
 
 def traiter_stockage(info_vehicule, hdd_path, cache_ram=None):
+    """
+    Renomme l'image en RAM et effectue la copie de sauvegarde sur le HDD.
+
+    Args:
+        info_vehicule (dict): Données de l'inspection.
+        hdd_path (str): Chemin racine du disque dur pour l'archivage.
+        cache_ram (GestionnaireRAM, optionnel): Instance pour le nettoyage du cache.
+
+    Returns:
+        bool: True si les opérations de stockage ont réussi.
+    """
     image_temp_ram = info_vehicule.get("image")
     if not image_temp_ram or not os.path.exists(image_temp_ram):
         print(f"[Storage] Image temp non trouvée {image_temp_ram}")
@@ -103,6 +150,20 @@ def traiter_stockage(info_vehicule, hdd_path, cache_ram=None):
 
 
 def modifier_nom(camera, vehicule, motorisation, type_mat, vis, chaine_controle):
+    """
+    Utilitaire pour générer un nom de fichier à partir de paramètres explicites.
+
+    Args:
+        camera (int): ID de la caméra.
+        vehicule (str): Modèle.
+        motorisation (str): Motorisation.
+        type_mat (str): Variante/Matériau.
+        vis (str): VIS.
+        chaine_controle (str): Suite de 0 et 1 pour les scores.
+
+    Returns:
+        str: Nom de fichier .jpg généré.
+    """
     if type_mat in [None, "None", "none", ""]:
         nom = f"{camera}_{vehicule}_{motorisation}_{vis}_{chaine_controle}.jpg"
     else:

@@ -1,10 +1,39 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Module d'interface avec l'automate industriel (PLC) via le protocole S7.
+
+Ce module permet de lire les données de production (VIS, type de véhicule) 
+et d'écrire les résultats des tests de vision pour que l'automate puisse
+gérer le flux de la ligne de production.
+
+Auteur: James DAY
+Date de création: 18 mai 2026
+"""
+
 import snap7
 from snap7.util import get_string, get_bool, set_bool, set_string
 from config import Config
 
 
 class Automate:
+    """
+    Classe de gestion de la communication avec un automate Siemens (S7).
+
+    Fournit des méthodes pour se connecter, lire des blocs de données (DB)
+    et écrire des résultats d'inspection.
+    """
+
     def __init__(self, ip, db_numero, rack=0, slot=0):
+        """
+        Initialise les paramètres de connexion à l'automate.
+
+        Args:
+            ip (str): Adresse IP de l'automate.
+            db_numero (int): Numéro du bloc de données (DB) à lire.
+            rack (int): Rack de l'automate (souvent 0).
+            slot (int): Slot de l'automate (souvent 1).
+        """
         self.ip = ip
         self.db_numero = db_numero
         self.rack = rack
@@ -13,27 +42,24 @@ class Automate:
         self.connect()
 
     def connect(self):
-        """
-        Se connecte à l'automate en utilisant les paramètres de la l'instance
-        Params :
-        - None
-        Retourne :
-        - None
-        """
+        """Établit la connexion avec l'automate."""
         try:
-            self.client.connect(self.ip, self.rack, self.slot)
-            print(f"[Automate] Connecté à l'automate")
+            self.client.connect(self.ip, self.rack, self.slot)  #
+            print("[Automate] Connecté à l'automate")
         except Exception as e:
             print(f"[Erreur - Automate {self.ip}] Échec de la connexion : {e}")
             self.client = None
 
     def lire_data(self):
         """
-        Lit les données de l'automate et traduit en informations exploitables
-        Params :
-        - None
-        Retourne :
-        - Dictionnaire contenant les informations lues ou None en cas d'erreur"""
+        Lit les informations du véhicule courant depuis la DB de l'automate.
+
+        Récupère le bit de présence, le VIS, le type de véhicule et les variantes
+        puis les traduit en informations compréhensibles par le système.
+
+        Returns:
+            dict: Données véhicule lues ou None en cas d'erreur.
+        """
         if self.client is None or not self.client.get_connected():
             print("[Automate] Automate hors ligne. Reconnexion...")
             self.connect()
@@ -75,14 +101,19 @@ class Automate:
 
     def envoyer_data(self, vehicule_ok, liste_defauts, erreur_systeme=False):
         """
-        Envoie les résultats de l'inspection à l'automate en formatant les données
-        Params :
-        - vehicule_ok : bool indiquant si le véhicule est conforme ou non
-        - liste_defauts : liste de chaînes de caractères décrivant les défauts détectés
-        - erreur_systeme : bool indiquant s'il y a eu une erreur système empêchant l'inspection
-        Retourne :
-        - bool indiquant si l'envoi a réussi ou non"""
+        Envoie les résultats de l'inspection à l'automate.
 
+        Écrit dans une DB spécifique le statut (OK/NOK/Erreur) et la liste des
+        défauts détectés sous forme de chaînes de caractères.
+
+        Args:
+            vehicule_ok (bool): True si toutes les zones sont conformes.
+            liste_defauts (list): Liste des noms des zones en défaut.
+            erreur_systeme (bool): True en cas de panne logicielle ou matérielle.
+
+        Returns:
+            bool: True si l'envoi a réussi.
+        """
         if self.client is None or not self.client.get_connected():
             print("[Automate] Automate d'envoie hors ligne. Reconnexion...")
             self.connect()

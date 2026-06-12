@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed May 20 13:59:32 2026
+Module d'affichage et d'interface interactive.
 
-@author: James DAY
+Ce module fournit un Canvas Tkinter personnalisé pour visualiser les images
+d'inspection, dessiner des zones de recherche, et interagir avec les résultats
+de vision (clic droit pour supprimer, glisser-déposer pour ajuster).
+
+Auteur: James DAY
+Date de création: 20 mai 2026
 """
 
 import tkinter as tk
@@ -18,9 +23,23 @@ import glob
 
 
 class Canvas_interactif(tk.Canvas):
+    """
+    Canvas Tkinter amélioré pour la visualisation et le paramétrage des zones.
+
+    Supporte le redimensionnement automatique, le dessin de rectangles de zones,
+    et la mise en évidence des résultats de matching (scores).
+    """
+
     def __init__(self, parent, db, csv_helper, app=None, max_size=(800, 600), **kwargs):
         """
-        Initialise un canvas interactif
+        Initialise le canvas interactif.
+
+        Args:
+            parent: Widget parent Tkinter.
+            db (Database): Instance de la base de données.
+            csv_helper (ZoneConfigHelper): Instance d'aide pour les CSV.
+            app (ApplicationTkinter): Référence vers l'application principale.
+            max_size (tuple): Taille maximale d'affichage (W, H).
         """
         super().__init__(parent, cursor="cross", bg="black", **kwargs)
         self.db = db

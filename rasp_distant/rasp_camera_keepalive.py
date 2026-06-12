@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 19 09:36:10 2026
+Démon de maintien d'activité des caméras.
 
-@author: James DAY
+Ce script initialise les caméras Picamera2 au démarrage et les maintient en veille active.
+Il écoute sur une socket locale les demandes de capture, permettant ainsi de réduire
+considérablement le temps de latence de prise de vue (pas de réinitialisation capteur).
+
+Auteur: James DAY
 """
 
 import socket
@@ -16,6 +20,12 @@ from libcamera import controls
 
 
 def activer_cam():
+    """
+    Initialise et configure toutes les caméras définies dans config_pi.
+
+    Returns:
+        dict: Dictionnaire contenant les instances Picamera2 et leurs chemins de sortie.
+    """
     photo_info = {}
     for i in range(len(Config.CAM)):
         photo_path = os.path.join(Config.PATH_PHOTO, f"cam{Config.CAM[i]}.jpg")
@@ -38,7 +48,9 @@ def activer_cam():
     return photo_info
     
 def serveur_connect():
-    
+    """
+    Démarre le serveur socket TCP et traite les commandes de capture.
+    """
     try:
         photo_info = activer_cam()
         

@@ -1,3 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Module de l'interface graphique utilisateur (GUI).
+
+Ce script définit la classe principale ApplicationTkinter qui gère l'affichage
+en temps réel des résultats d'inspection, la navigation dans l'historique,
+le mode administrateur pour le paramétrage des zones, et la communication
+avec les autres modules (BDD, Automate, Stockage).
+
+Auteur: James DAY
+Date de création: 18 mai 2026
+"""
+
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 import os
@@ -16,7 +30,25 @@ from helper_automate import Automate
 
 
 class ApplicationTkinter:
+    """
+    Classe principale pilotant l'interface Tkinter du système.
+
+    Responsable du cycle de vie de l'UI : 
+    - Consommation de la queue de résultats vision.
+    - Affichage des images et des scores.
+    - Gestion des alertes (disque plein, erreurs).
+    - Mode administrateur (création de références, définition de zones).
+    - Envoi des résultats finaux à l'automate.
+    """
+
     def __init__(self, root, queue_in):
+        """
+        Initialise l'application et ses composants.
+
+        Args:
+            root (tk.Tk): Fenêtre racine Tkinter.
+            queue_in (multiprocessing.Queue): File d'entrée des résultats d'analyse.
+        """
         self.root = root
         self.queue_in = queue_in
         self.root.title("Contrôle Vissages CV")

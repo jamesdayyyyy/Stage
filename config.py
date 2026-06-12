@@ -1,35 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon May 18 15:23:26 2026
+Module de configuration centralisé pour l'application.
 
-@author: James DAY
+Ce module contient toutes les constantes, les paramètres matériels (Raspberry Pi, Automates),
+les chemins d'accès aux fichiers (Base de données, images, CSV) ainsi que les seuils
+et paramètres pour l'analyse d'image.
 
-
-MODIFICATION A FAIRE DE LA STRUCTURE:
-Mettre le VIS et non le timestamp dans le nom de l'image, et les autres infos dans la base de données
-Test a faire
-
-Structure de info_vehicule finale:
-
-info_vehicule = {
-    "vis" : str
-    "vehciule" : str
-    "motorisation" : str
-    "timestamp"
-    "image" -> path dans la RAM
-    "camera_source"
-    "variante_active" --> ref de variante
-    "resultats_vision" : [{
-        "numero_zone"
-        "nom_vissage"
-        "score"
-        "ref_path"
-        "match_x" --> ce sont les coordonnées du point en haut a gauche de la zone qui correspond le mieux a la référence
-        "match_y"
-        }]
-    "image_hdd_path"
-    }
+Auteur: James DAY
+Date de création: 18 mai 2026
 """
 
 from dataclasses import dataclass
@@ -37,6 +16,24 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
+    """
+    Classe regroupant l'ensemble des paramètres de configuration du système.
+    
+    Attributs:
+        PASSWORD (str): Mot de passe pour les actions sécurisées dans l'interface.
+        RASPBERRY (list): Liste des configurations réseau pour chaque Raspberry Pi esclave.
+        CAM (list): Liste des caméras configurées et leurs caractéristiques.
+        DATABASE_PATH (str): Chemin vers le fichier de base de données SQLite.
+        TEMPORAIRE_PATH (str): Chemin pour le stockage temporaire en RAM (/dev/shm).
+        HDD_PATH (str): Chemin pour le stockage permanent sur disque.
+        ZONES_CSV_PATH (str): Répertoire contenant les définitions des zones de recherche.
+        REF_PATH (str): Répertoire contenant les images de référence.
+        MARGE_RECHERCHE (int): Marge de pixels pour la recherche de template.
+        SCORE_SEUIL (float): Score minimum pour valider une correspondance d'image.
+        AUTOMATE_* : Paramètres de communication avec l'automate (S7).
+        MAPPING_VEHICULE (dict): Correspondance entre codes cycles et types de véhicules.
+        MAPPING_PIECE (dict): Correspondance entre codes cycles et variantes de pièces.
+    """
     PASSWORD = "ing"  # pas secret car accéssible dans ce fichier mais enlève risque de modif accidentelle
 
     RASPBERRY = [

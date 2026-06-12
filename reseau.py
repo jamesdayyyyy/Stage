@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon May 18 15:00:32 2026
+Module de gestion des communications réseau.
 
-@author: James DAY
+Ce module gère les connexions SSH avec les Raspberry Pi distantes pour la capture
+d'images, ainsi que l'échange de données avec l'automate industriel (PLC) pour
+détecter la présence des véhicules et récupérer leurs caractéristiques.
+
+Auteur: James DAY
+Date de création: 18 mai 2026
 """
 
 import time
@@ -18,7 +23,23 @@ from config import Config
 
 
 class Connexion_SSH:
+    """
+    Gère une connexion SSH persistante vers un Raspberry Pi esclave.
+
+    Cette classe permet d'exécuter des scripts de prise de vue à distance et de
+    rapatrier les fichiers images via SFTP.
+
+    Attributs:
+        numero (int): Identifiant de la Pi.
+        ip (str): Adresse IP de la Pi.
+        username (str): Nom d'utilisateur SSH.
+        password (str): Mot de passe SSH.
+        cameras (list): Liste des IDs de caméras connectées à cette Pi.
+        ssh (paramiko.SSHClient): Instance du client SSH.
+    """
+
     def __init__(self, pi):
+        """Initialise et tente la connexion SSH."""
         self.numero = pi["NUMERO"]
         self.ip = pi["IP"]
         self.username = pi["USERNAME"]
@@ -28,6 +49,7 @@ class Connexion_SSH:
         self.connect()
 
     def connect(self):
+        """Établit la connexion SSH et lance le service de maintien de caméra."""
         try:
             self.ssh = paramiko.SSHClient()
             self.ssh.load_system_host_keys()
@@ -50,6 +72,12 @@ class Connexion_SSH:
             self.ssh = None
 
     def get_photo(self):
+        """
+        Déclenche la prise de photo sur la Pi et télécharge les fichiers.
+
+        Returns:
+            list: Liste de dictionnaires contenant le chemin local et l'ID de la caméra.
+        """
         if self.ssh is None or not self.ssh.get_transport().is_active():
             print(f"[Réseau] Pi {self.numero} hors ligne. Reconnexion...")
             self.connect()
@@ -93,6 +121,15 @@ class Connexion_SSH:
 
 
 def check_capture(queue_out):
+    """
+    Boucle de surveillance de l'automate (exécutée dans un processus séparé).
+
+    Détecte le passage d'un nouveau véhicule, déclenche la capture sur toutes
+    les Pi en parallèle, et envoie les informations à la file d'analyse vision.
+
+    Args:
+        queue_out (multiprocessing.Queue): File d'attente vers le module vision.
+    """
     connexions_ssh = [
         Connexion_SSH(rasp) for rasp in Config.RASPBERRY if rasp["NUMERO"] != 0
     ]

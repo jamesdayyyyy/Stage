@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon May 18 08:15:01 2026
+Point d'entrée principal de l'application de contrôle qualité par vision.
 
-@author: James DAY
+Ce script initialise les files d'attente (queues) pour la communication entre processus
+et lance les différents composants de l'application :
+- Un processus de capture réseau (réception des images).
+- Deux processus d'analyse d'image (vision par ordinateur) pour paralléliser les calculs.
+- L'interface graphique utilisateur (Tkinter).
+
+Auteur: James DAY
+Date de création: 18 mai 2026
 """
 
 import multiprocessing

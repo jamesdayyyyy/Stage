@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed May 20 08:48:21 2026
+Module de gestion de la base de données SQLite.
 
-@author: James DAY
-"""
+Ce module fournit une interface pour stocker et interroger l'historique des inspections,
+incluant les données des véhicules, les timestamps et les scores détaillés par zone.
 
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed May 13 09:53:19 2026
-
-@author: James DAY
+Auteur: James DAY
+Date de création: 13 mai 2026
 """
 
 import sqlite3
@@ -19,17 +15,24 @@ from config import Config
 
 
 class Database:
+    """
+    Gestionnaire de la base de données SQLite pour l'historique de production.
+
+    Cette classe gère la création des tables, l'insertion des résultats d'inspection
+    et les recherches multicritères.
+    """
+
     def __init__(self):
+        """Initialise le chemin de la base de données et crée les tables si nécessaire."""
         self.db_path = Config.DATABASE_PATH
         self._initialiser()
 
     def _initialiser(self):
         """
-        Initialise la base de données au démarrage si elle n'existe pas déjà
-        Params :
-        - None
-        Retourne :
-        - None
+        Initialise la structure de la base de données (tables et index).
+
+        Crée les tables 'inspections' (données générales) et 'zone_results' (détails par zone)
+        avec les contraintes d'intégrité et les index de performance.
         """
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("PRAGMA foreign_keys = ON;")
@@ -69,11 +72,14 @@ class Database:
 
     def sauvegarder_info(self, info_vehicule):
         """
-        Ajoute à la base de donnée les résultats d'une ananlyse
-        Params :
-        - info_vehicule (dict)
-        Retourne :
-        - bool en fonction de si réussi ou non
+        Enregistre les résultats complets d'une analyse dans la base de données.
+
+        Args:
+            info_vehicule (dict): Dictionnaire contenant les données du véhicule et 
+                                 les scores de vision.
+
+        Returns:
+            bool: True si la sauvegarde a réussi, False sinon (avec rollback).
         """
         try:
             conn = sqlite3.connect(self.db_path)
@@ -133,14 +139,15 @@ class Database:
         self, vis, vehicule, camera, zone_id, new_match_x, new_match_y
     ):
         """
-        Enregistre une prise de référence en utilisant les tables existantes.
-        Params:
-        - vis
-        - vehicule
-        - camera : id de la caméra (str)
-        - zone_id :  id de la zone (str)
-        Retourne :
-        - None
+        Met à jour un résultat pour marquer une prise de référence (score 100%).
+
+        Args:
+            vis (str): Numéro VIS du véhicule.
+            vehicule (str): Modèle du véhicule.
+            camera (str/int): ID de la caméra.
+            zone_id (str): ID de la zone.
+            new_match_x (int): Nouvelle coordonnée X de correspondance.
+            new_match_y (int): Nouvelle coordonnée Y de correspondance.
         """
         try:
             conn = sqlite3.connect(self.db_path)
@@ -173,7 +180,15 @@ class Database:
 
     def update_type_materiau(self, vis, camera, type_mat):
         """
-        Met à jour le type du véhicule dans la base de données
+        Met à jour la variante de matériau/type pour une inspection donnée.
+
+        Args:
+            vis (str): Numéro VIS du véhicule.
+            camera (str/int): ID de la caméra.
+            type_mat (str): Nom du type ou matériau.
+
+        Returns:
+            bool: True si succès.
         """
         try:
             conn = sqlite3.connect(self.db_path)
@@ -211,14 +226,16 @@ class Database:
         statut_query="Tous",
     ):
         """
-        Effectue une recherche sur la base de données afin d'afficher les 50 derniers véhicules correspondant
-        Params:
-        - vis_query : VIS recherché
-        - vehicule_query : vehicule_recherché
-        - motorisation_query : motorisation recherché
-        - statut_query : statut du véhicule (OK/NOK ou tous) recherché
-        Retourne :
-        - liste des résultats de recherche avec vis, vehicule, motorisation, timestamp, et le score min sur le véhicule
+        Recherche les véhicules dans l'historique selon plusieurs critères.
+
+        Args:
+            vis_query (str): Filtre sur le VIS (partiel).
+            vehicule_query (str): Filtre sur le modèle.
+            motorisation_query (str): Filtre sur la motorisation.
+            statut_query (str): 'Tous', 'OK' (score min >= seuil) ou 'NOK'.
+
+        Returns:
+            list: Liste des 50 derniers résultats trouvés (tuples).
         """
         try:
             conn = sqlite3.connect(self.db_path)

@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon May 18 15:05:49 2026
+Module de traitement d'images et de vision par ordinateur.
 
-@author: James DAY
+Ce module est responsable de l'analyse des photos capturées pour vérifier la présence
+et la conformité des pièces (vissage, composants). Il utilise la technique du 
+'Template Matching' via OpenCV pour comparer des zones d'intérêt avec des images de référence.
+
+Auteur: James DAY
+Date de création: 18 mai 2026
 """
 
 import csv
@@ -14,12 +19,19 @@ import glob
 
 from config import Config
 
-"""
-Il faut ajouter la gesiton de type du vehicule
-"""
-
 
 def determiner_path(vehicule, motorisation, type_zone):
+    """
+    Détermine le chemin du dossier contenant les images de référence.
+
+    Args:
+        vehicule (str): Nom du modèle de véhicule (ex: P51).
+        motorisation (str): Type de motorisation (ex: ICE, PHEV).
+        type_zone (str): Sous-catégorie ou variante de la zone.
+
+    Returns:
+        str: Chemin absolu ou relatif vers le dossier de références.
+    """
     base_dir = f"{Config.REF_PATH}/{vehicule}_{motorisation}"
     if type_zone == "":
         return base_dir
@@ -28,13 +40,36 @@ def determiner_path(vehicule, motorisation, type_zone):
 
 
 def traitement_image(image):
+    """
+    Applique un pré-traitement à l'image pour faciliter la comparaison.
+
+    Conversion en niveaux de gris et application d'un flou gaussien pour 
+    réduire le bruit.
+
+    Args:
+        image (numpy.ndarray): Image source en BGR.
+
+    Returns:
+        numpy.ndarray: Image traitée en niveaux de gris.
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     return blurred
 
 
 def analyse_image(queue_in, queue_out, worker_id):
+    """
+    Boucle principale de traitement d'image (exécutée dans un processus séparé).
 
+    Lit les informations des véhicules depuis la queue d'entrée, charge l'image correspondante,
+    effectue le template matching pour chaque zone définie dans le fichier CSV,
+    et envoie les résultats vers la queue de sortie (UI).
+
+    Args:
+        queue_in (multiprocessing.Queue): File d'attente recevant les données véhicules et chemins images.
+        queue_out (multiprocessing.Queue): File d'attente envoyant les résultats d'analyse.
+        worker_id (str): Identifiant du processus (pour le logging).
+    """
     MARGE_RECHERCHE = Config.MARGE_RECHERCHE
 
     while True:
