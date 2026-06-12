@@ -140,15 +140,52 @@ class Automate:
             for i in range(NB_MAX_DEFAUTS):
                 offset_actuel = OFFSET_ARRAY + (i * TAILLE_STRING)
                 if i < len(liste_defauts) and not erreur_systeme:
-                    set_string(data, offset_actuel, liste_defauts[i][:32])
+                    set_string(data, offset_actuel, liste_defauts[i][:32], 32)
                 else:
-                    set_string(data, offset_actuel, "")
+                    set_string(data, offset_actuel, "", 32)
             self.client.db_write(Config.AUTOMATE_DB_ENVOIE, 0, data)
             print("[Automate] Données envoyées à l'automate")
             return True
 
         except Exception as e:
             print(f"[Erreur - Automate] Échec de l'envoi : {e}")
+            self.client.disconnect()
+            self.client = None
+            return False
+
+    def reset_data(self):
+        if self.client is None or not self.client.get_connected():
+            print("[Automate] Automate hors ligne. Reconnexion pour le reset...")
+            self.connect()
+        if self.client is None:
+            print("[Automate] Impossible de se connecter pour le reset.")
+            return False
+
+        try:
+            OFFSET_BOOLS = 0
+            OFFSET_ARRAY = 2
+
+            NB_MAX_DEFAUTS = Config.AUTOMATE_NB_MAX_DEFAUTS
+            TAILLE_STRING = Config.AUTOMATE_OCTETS_DEFAUTS
+            taille_totale_db = OFFSET_ARRAY + (NB_MAX_DEFAUTS * TAILLE_STRING)
+
+            data = bytearray(taille_totale_db)
+
+            set_bool(data, OFFSET_BOOLS, 0, False)  # erreur_systeme
+            set_bool(data, OFFSET_BOOLS, 1, False)  # vehicule_ok
+            set_bool(data, OFFSET_BOOLS, 2, False)  # vehicule_nok
+
+            # On vide proprement les chaînes de caractères (important pour l'en-tête Siemens)
+            for i in range(NB_MAX_DEFAUTS):
+                offset_actuel = OFFSET_ARRAY + (i * TAILLE_STRING)
+                set_string(data, offset_actuel, "", 32)
+
+            self.client.db_write(Config.AUTOMATE_DB_ENVOIE, 0, data)
+            print("[Automate] RAZ effectué avec succès (Véhicule sorti du pas).")
+            return True
+
+        except Exception as e:
+            print(f"[Erreur - Automate] Échec du reset : {e}")
             self.client.disconnect()
             self.client = None
             return False

@@ -190,6 +190,11 @@ def check_capture(queue_out):
                             }
 
                             queue_out.put(to_send)
+            elif not nouveau_etat_presence and ancien_etat_presence:
+                print(
+                    "[Système] Le véhicule a quitté le pas. Réinitialisation de l'automate..."
+                )
+                automate.reset_data()
             ancien_etat_presence = nouveau_etat_presence
 
     except KeyboardInterrupt:
