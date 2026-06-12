@@ -3,7 +3,7 @@
 """
 Module d'interface avec l'automate industriel (PLC) via le protocole S7.
 
-Ce module permet de lire les données de production (VIS, type de véhicule) 
+Ce module permet de lire les données de production (VIS, type de véhicule)
 et d'écrire les résultats des tests de vision pour que l'automate puisse
 gérer le flux de la ligne de production.
 
