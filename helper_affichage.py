@@ -477,7 +477,7 @@ class Canvas_interactif(tk.Canvas):
         Retourne :
         - None
         """
-        if not self.image_path or not self.rect:
+        if not self.image_path:
             return
 
         if self.zone_en_deplacement:
@@ -705,7 +705,9 @@ class Canvas_interactif(tk.Canvas):
             os.rename(self.image_path, path_to_change)
             self.image_path = path_to_change
         else:
-            self.db.update_type_materiau(self.vis, self.camera, self.variante_active)
+            self.db.update_type_materiau(
+                self.vis, self.camera, self.variante_active, orig_x0, orig_y0
+            )
 
         print(f"[Canvas] Zone {new_id} créée et historisée.")
 

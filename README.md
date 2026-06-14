@@ -78,24 +78,24 @@ Ce système effectue un **contrôle qualité automatisé** par vision sur une li
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    RASPBERRY PI PRINCIPAL                    │
+│                    RASPBERRY PI PRINCIPAL                   │
 │                   10.226.178.51 (pimain)                    │
 │                                                             │
-│  ┌────────────┐   ┌─────────────┐   ┌──────────────────┐   │
-│  │  Processus │   │  Processus  │   │    Processus UI   │   │
-│  │  Réseau    │──▶│  Vision x2  │──▶│  (Tkinter)       │   │
-│  │ reseau.py  │   │  vision.py  │   │  interface.py    │   │
-│  └────────────┘   └─────────────┘   └──────────────────┘   │
-│       │  ▲                │                                  │
+│  ┌────────────┐   ┌─────────────┐   ┌──────────────────┐    │
+│  │  Processus │   │  Processus  │   │    Processus UI  │    │
+│  │  Réseau    │──▶│  Vision x2  │──▶│  (Tkinter)       │    │
+│  │ reseau.py  │   │  vision.py  │   │  interface.py    │    │
+│  └────────────┘   └─────────────┘   └──────────────────┘    │
+│       │  ▲                │                                 │
 │  SSH  │  │ S7/snap7       │ SQLite + HDD                    │
-└───────┼──┼────────────────┼────────────────────────────────┘
+└───────┼──┼────────────────┼────────────────────────────────-┘
         │  │                │
         │  │                ▼
         │  │    ┌──────────────────────┐
-        │  └────│  AUTOMATE SIEMENS S7  │
-        │       │  10.226.178.1         │
-        │       │  DB102 (lecture)      │
-        │       │  DB105 (écriture)     │
+        │  └────│  AUTOMATE SIEMENS S7 │
+        │       │  10.226.178.1        │
+        │       │  DB102 (lecture)     │
+        │       │  DB105 (écriture)    │
         │       └──────────────────────┘
         │
         ▼
@@ -124,8 +124,8 @@ Ce système effectue un **contrôle qualité automatisé** par vision sur une li
 | Composant | Description | Qté (config actuelle) |
 |---|---|---|
 | Raspberry Pi 4 ou 5 | Pi principale (pimain) | 1 |
-| Raspberry Pi 4 ou 5 | Pi esclaves (rasp1, ingpi…) | 2+ |
-| Caméras USB ou CSI | Compatible V4L2 / picamera2 | 1 par point de contrôle |
+| Raspberry Pi 4 ou 5 | Pi esclaves (rasp1, ingpi…) | 8 |
+| Caméras USB ou CSI | Compatible V4L2 / picamera2 | 14 |
 | Câbles réseau Ethernet | Pour le réseau industriel | 1 par Pi |
 | Switch réseau | Réseau local industriel | 1 |
 | Disque dur / SSD USB | Archivage images sur Pi principale | 1 |
@@ -165,11 +165,9 @@ python3 -c "import snap7; import paramiko; import cv2; print('OK')"
 ```bash
 # Selon le type de caméra utilisée
 sudo apt install python3-picamera2 -y   # Caméra CSI (module officiel Pi)
-# OU
-pip3 install opencv-python              # Caméra USB via V4L2
 ```
-
-Les Pi esclaves n'ont besoin que des scripts `prise_photo.py` et `rasp_camera_keepalive.py` (voir section 7.3).
+> Note : Cette installation n'est pas nécessaire sur un Raspberry Pi 5
+Les Pi esclaves n'ont besoin que des scripts `prise_photo.py`, `reset_time.py` et `rasp_camera_keepalive.py` (voir section 7.3).
 
 ---
 
@@ -378,7 +376,7 @@ CAM = [
     },
     {
         "NUMERO": 2,
-        "TYPE": False,                        # Non utilisé actuellement
+        "VARIANTE_REQUISE": "",               # Pas de variante sur cette caméra
         "ACTIVE": True,
         "NOM": "Ecran sous moteur D",
     },

@@ -18,7 +18,7 @@ from dataclasses import dataclass
 class Config:
     """
     Classe regroupant l'ensemble des paramètres de configuration du système.
-    
+
     Attributs:
         PASSWORD (str): Mot de passe pour les actions sécurisées dans l'interface.
         RASPBERRY (list): Liste des configurations réseau pour chaque Raspberry Pi esclave.
@@ -34,6 +34,7 @@ class Config:
         MAPPING_VEHICULE (dict): Correspondance entre codes cycles et types de véhicules.
         MAPPING_PIECE (dict): Correspondance entre codes cycles et variantes de pièces.
     """
+
     PASSWORD = "ing"  # pas secret car accéssible dans ce fichier mais enlève risque de modif accidentelle
 
     RASPBERRY = [
@@ -113,10 +114,15 @@ class Config:
             "ACTIVE": True,
             "NOM": "Ecran sous moteur G",
         },
-        {"NUMERO": 2, "TYPE": False, "ACTIVE": True, "NOM": "Ecran sous moteur D"},
+        {
+            "NUMERO": 2,
+            "VARIANTE_REQUISE": "code_ecran",
+            "ACTIVE": True,
+            "NOM": "Ecran sous moteur D",
+        },
         {
             "NUMERO": 3,
-            "TYPE": False,
+            "VARIANTE_REQUISE": "",
             "ACTIVE": True,
             "NOM": "Deflecteur AVD sous plancher (EH)",
         },
@@ -125,69 +131,69 @@ class Config:
         ,
         {
         "NUMERO" : 4,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Déflecteur AVD sous plancher (EM)"
         },
         {
         "NUMERO" : 5,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Deflecteur ARD sous reservoir"
         },
         {
         "NUMERO" : 6,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Defelcteur AVD sous plancher (IH)"
         },
         {
         "NUMERO" : 7,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Deflecteur AVD sous plancher (IB)"
         },
         {
         "NUMERO" : 8,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Deflecteur AVG sous plancher (IH)"
         },
         {
         "NUMERO" : 9,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Deflecteur AVG sous plancher (IB)"
         },
         {
         "NUMERO" : 10,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Deflecteur AVG sous plancher (EH)"
         },
         {
         "NUMERO" : 11,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Deflecteur AVG sous plancher (EM)"
         },
         {
         "NUMERO" : 12,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Deflecteur ARG sous reservoir"
         }
         ,
         {
         "NUMERO" : 13,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Protecteur D / Train AR"
         }
         ,
         {
         "NUMERO" : 14,
-        "TYPE" : False,
+        "VARIANTE_REQUISE": "",
         "ACTIVE" : True,
         "NOM" : "Protecteur G / Train AR"
         }
@@ -201,7 +207,7 @@ class Config:
 
     MARGE_RECHERCHE = 100
 
-    SCORE_SEUIL = 85.0
+    SCORE_SEUIL = 80.0
 
     CACHE_LIMIT = 3
 
