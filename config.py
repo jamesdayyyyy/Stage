@@ -65,9 +65,9 @@ class Config:
         {
         "NUMERO" : 3,
         "IP" : "10.226.178.54",
-        "USERNAME" : "ingpi",
+        "USERNAME" : "rasp3",
         "PASSWORD" : "raspberry1",
-        "CAM" :  [1],
+        "CAM" :  [4, 5],
         }
         ,
         {
@@ -75,35 +75,35 @@ class Config:
         "IP" : "10.226.178.55",
         "USERNAME" : "ingpi",
         "PASSWORD" : "raspberry1",
-        "CAM" :  [1],
+        "CAM" :  [6, 7],
         },
         {
         "NUMERO" : 5@,
         "IP" : "10.226.178.56",
-        "USERNAME" : "ingpi",
+        "USERNAME" : "rasp5",
         "PASSWORD" : "raspberry1",
-        "CAM" :  [1],
+        "CAM" :  [8],
         },
         {
         "NUMERO" : 6,
         "IP" : "10.226.178.57",
-        "USERNAME" : "ingpi",
+        "USERNAME" : "rasp6",
         "PASSWORD" : "raspberry1",
-        "CAM" :  [1],
+        "CAM" :  [9, 10],
         },
         {
         "NUMERO" : 7,
         "IP" : "10.226.178.58",
-        "USERNAME" : "ingpi",
+        "USERNAME" : "rasp7",
         "PASSWORD" : "raspberry1",
-        "CAM" :  [1],
+        "CAM" :  [11, 12],
         },
         {
         "NUMERO" : 8,
         "IP" : "10.226.178.59",
-        "USERNAME" : "ingpi",
+        "USERNAME" : "rasp8",
         "PASSWORD" : "raspberry1",
-        "CAM" :  [1],
+        "CAM" :  [13, 14],
         }
     """
 
