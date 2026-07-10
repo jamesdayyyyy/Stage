@@ -231,6 +231,7 @@ class Config:
         "silhouette": 18,
         "code_moteur": 24,
         "code_ecran": 30,
+        "numero_sequence": 36,
     }
 
     MAPPING_VEHICULE = {
