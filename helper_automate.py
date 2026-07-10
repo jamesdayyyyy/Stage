@@ -3,7 +3,7 @@
 """
 Module d'interface avec l'automate industriel (PLC) via le protocole S7.
 
-Ce module permet de lire les données de production (VIS, type de véhicule)
+Ce module permet de lire les données de production (VIS, type de véhicule, numéro de séquence)
 et d'écrire les résultats des tests de vision pour que l'automate puisse
 gérer le flux de la ligne de production.
 
@@ -54,7 +54,7 @@ class Automate:
         """
         Lit les informations du véhicule courant depuis la DB de l'automate.
 
-        Récupère le bit de présence, le VIS, le type de véhicule et les variantes
+        Récupère le bit de présence, le VIS, le type de véhicule, le numéro de séquence et les variantes
         puis les traduit en informations compréhensibles par le système.
 
         Returns:
