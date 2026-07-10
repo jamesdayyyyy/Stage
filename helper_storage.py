@@ -82,6 +82,7 @@ def generer_nom(info_vehicule):
     motorisation = info_vehicule.get("motorisation", "Inconnu")
     variante = info_vehicule.get("variante_active")
     vis = info_vehicule.get("vis", "Inconnu")
+    sequence = info_vehicule.get ("sequence", "Inconnu")
 
     resultats = info_vehicule.get("resultats_vision", [])
     try:
@@ -98,8 +99,8 @@ def generer_nom(info_vehicule):
             chaine_controle += "0"
 
     if variante in [None, "None", "none", ""]:
-        return f"{camera}_{vehicule}_{motorisation}_{vis}_{chaine_controle}.jpg"
-    return f"{camera}_{vehicule}_{motorisation}_{variante}_{vis}_{chaine_controle}.jpg"
+        return f"{camera}_{vehicule}_{motorisation}_{vis}_{chaine_controle}_{sequence}.jpg"
+    return f"{camera}_{vehicule}_{motorisation}_{variante}_{vis}_{chaine_controle}_{sequence}.jpg"
 
 
 def traiter_stockage(info_vehicule, hdd_path, cache_ram=None):
