@@ -88,6 +88,7 @@ class Automate:
             return {
                 "vh_dans_pas": vh_dans_pas,
                 "vis": variantes_recues.get("vis", ""),
+                "sequence": variantes_recues.get("sequence","")
                 "vehicule": info_traduite.get("VEHICULE", "Inconnu"),
                 "motorisation": info_traduite.get("MOTORISATION", "Inconnu"),
                 "variantes": variantes_recues,
