@@ -67,7 +67,7 @@ class Canvas_interactif(tk.Canvas):
 
         self.camera = self.vehicule = self.motorisation = self.variante_active = (
             self.vis
-        ) = None
+        ) = self.sequence = None
 
         self.timer_rafraichissement = None
 
@@ -163,14 +163,16 @@ class Canvas_interactif(tk.Canvas):
             self.motorisation = detail[2]
             self.variante_active = detail[3]
             self.vis = detail[4]
-            self.controle = detail[5].split(".")[0]
+            self.controle = detail[5]
+            self.sequence = detail[6].split(".")[0]
 
         elif len(detail) == 5:
             self.camera = detail[0]
             self.vehicule = detail[1]
             self.motorisation = detail[2]
             self.vis = detail[3]
-            self.controle = detail[4].split(".")[0]
+            self.controle = detail[4]
+            self.sequence = detail[5].split(".")[0]
             self.variante_active = ""
 
         else:
